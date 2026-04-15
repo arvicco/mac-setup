@@ -2,33 +2,35 @@
 
 module MacSetup
   class Node < BaseModule
+    NVM_DIR = File.expand_path("~/.nvm")
+
     def run
-      # TODO: Choose your Node version manager (nvm, nodenv, fnm)
       install_nvm unless nvm_installed?
       install_node_lts
+      logger.info "Node and nvm are available. Open a new terminal or run: source ~/.zshrc"
     end
 
     private
 
     def nvm_installed?
-      File.directory?(File.expand_path("~/.nvm"))
+      File.directory?(NVM_DIR)
     end
 
     def install_nvm
       logger.info "Installing nvm..."
       cmd.run(
-        "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash",
-        abort_on_fail: false
+        "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash",
+        abort_on_fail: true
       )
     end
 
     def install_node_lts
       logger.info "Installing Node.js LTS..."
-      # nvm needs to be sourced in the same shell
-      cmd.run(
-        'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm install --lts',
-        abort_on_fail: false
-      )
+      cmd.run(nvm_prefix + "nvm install --lts", abort_on_fail: true)
+    end
+
+    def nvm_prefix
+      "export NVM_DIR=\"#{NVM_DIR}\" && . \"$NVM_DIR/nvm.sh\" && "
     end
   end
 end
