@@ -7,7 +7,7 @@ Automated MacBook setup script. Configures a fresh Mac with my standard tools, a
 On a fresh Mac, run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vb/mac-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install.sh | bash
 ```
 
 This will:
@@ -18,7 +18,7 @@ This will:
 ## Manual Usage
 
 ```bash
-git clone https://github.com/vb/mac-setup.git ~/mac-setup
+git clone https://github.com/arvicco/mac-setup.git ~/mac-setup
 cd ~/mac-setup
 ruby bin/setup
 ```
@@ -32,17 +32,15 @@ ruby bin/setup --list     # List available modules
 ruby bin/setup homebrew   # Run specific module(s) by name
 ```
 
-## Modules
+## Setup Steps (in execution order)
 
-| Module | Description |
-|--------|-------------|
-| Homebrew | Installs Homebrew and packages from `config/Brewfile` |
-| Cask | Post-install configuration for Cask apps |
-| Macos Defaults | Applies macOS system preferences |
-| Git Config | Sets global git configuration |
-| Shell | Zsh and Oh My Zsh setup |
-| Ssh | Generates SSH keys |
-| Node | Installs nvm and Node.js LTS |
+1. **Homebrew** — Installs Homebrew (if missing) and all packages from `config/Brewfile`
+2. **Cask** — Post-install configuration for Homebrew Cask apps
+3. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
+4. **Git Config** — Sets global git configuration (name, email, default branch, editor)
+5. **Shell** — Installs Oh My Zsh (if missing) and configures zsh
+6. **SSH** — Generates an ed25519 SSH key (if missing) and adds it to the macOS keychain
+7. **Node** — Installs nvm and Node.js LTS
 
 ## Customization
 
