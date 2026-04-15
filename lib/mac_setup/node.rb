@@ -7,7 +7,7 @@ module MacSetup
     def run
       install_nvm unless nvm_installed?
       install_node_lts
-      logger.info "Node and nvm are available. Open a new terminal or run: source ~/.zshrc"
+      add_node_to_path
     end
 
     private
@@ -27,6 +27,15 @@ module MacSetup
     def install_node_lts
       logger.info "Installing Node.js LTS..."
       cmd.run(nvm_prefix + "nvm install --lts", abort_on_fail: true)
+    end
+
+    def add_node_to_path
+      # Find the nvm-installed node binary and add it to PATH for this process
+      node_bin = Dir.glob("#{NVM_DIR}/versions/node/*/bin").max
+      if node_bin && !ENV["PATH"].include?(node_bin)
+        ENV["PATH"] = "#{node_bin}:#{ENV['PATH']}"
+        logger.info "Added #{node_bin} to PATH for this session."
+      end
     end
 
     def nvm_prefix
