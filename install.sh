@@ -30,7 +30,13 @@ else
   git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# 3. Run setup
-echo "==> Running setup..."
-cd "$INSTALL_DIR"
-ruby bin/setup
+# 3. Done — print next steps
+echo ""
+echo "==> Ready! Now run:"
+echo ""
+echo "    cd ~/mac-setup && ruby bin/setup"
+echo ""
+echo "    Options:"
+echo "      ruby bin/setup --all    # run all modules without prompting"
+echo "      ruby bin/setup --list   # list available modules"
+echo ""
