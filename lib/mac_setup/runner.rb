@@ -52,7 +52,7 @@ module MacSetup
       end
 
       logger.info ""
-      logger.success "All done!"
+      logger.success "All done! Open a new terminal for all tools to be available."
     end
 
     private

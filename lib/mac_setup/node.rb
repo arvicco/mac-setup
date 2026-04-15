@@ -6,6 +6,7 @@ module MacSetup
 
     def run
       install_nvm unless nvm_installed?
+      ensure_nvm_in_zshrc
       install_node_lts
       add_node_to_path
     end
@@ -35,6 +36,21 @@ module MacSetup
       if node_bin && !ENV["PATH"].include?(node_bin)
         ENV["PATH"] = "#{node_bin}:#{ENV['PATH']}"
         logger.info "Added #{node_bin} to PATH for this session."
+      end
+    end
+
+    def ensure_nvm_in_zshrc
+      zshrc = File.expand_path("~/.zshrc")
+      nvm_snippet = 'export NVM_DIR="$HOME/.nvm"'
+      return if File.exist?(zshrc) && File.read(zshrc).include?(nvm_snippet)
+
+      logger.info "Adding nvm to ~/.zshrc..."
+      File.open(zshrc, "a") do |f|
+        f.puts ""
+        f.puts '# nvm'
+        f.puts 'export NVM_DIR="$HOME/.nvm"'
+        f.puts '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+        f.puts '[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"'
       end
     end
 
