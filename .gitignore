@@ -1,0 +1,20 @@
+*.gem
+*.rbc
+/.config
+/coverage/
+/pkg/
+/spec/reports/
+/tmp/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

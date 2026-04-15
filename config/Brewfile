@@ -1,0 +1,23 @@
+# Taps
+tap "homebrew/bundle"
+
+# CLI tools
+brew "git"
+brew "gh"
+brew "jq"
+brew "ripgrep"
+brew "tree"
+brew "wget"
+brew "htop"
+
+# Applications (via Homebrew Cask)
+# cask "visual-studio-code"
+# cask "iterm2"
+# cask "rectangle"
+# cask "1password"
+# cask "slack"
+# cask "firefox"
+# cask "docker"
+
+# Mac App Store (requires `mas` CLI)
+# mas "Xcode", id: 497799835

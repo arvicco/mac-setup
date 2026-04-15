@@ -1,0 +1,20 @@
+# macOS defaults to apply via `defaults write`
+# Each entry: domain, key, type (string/bool/int/float), value
+
+# Example: show hidden files in Finder
+- domain: com.apple.finder
+  key: AppleShowAllFiles
+  type: bool
+  value: true
+
+# Example: show path bar in Finder
+- domain: com.apple.finder
+  key: ShowPathbar
+  type: bool
+  value: true
+
+# Example: Dock auto-hide
+# - domain: com.apple.dock
+#   key: autohide
+#   type: bool
+#   value: true
