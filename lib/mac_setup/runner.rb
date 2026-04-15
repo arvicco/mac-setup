@@ -39,6 +39,7 @@ module MacSetup
       logger.info "Mac Setup v#{MacSetup::VERSION}"
       logger.info "=" * 40
 
+      acquire_sudo(logger)
       modules_to_run = select_modules(logger)
 
       modules_to_run.each do |mod_class|
@@ -55,6 +56,18 @@ module MacSetup
     end
 
     private
+
+    def acquire_sudo(logger)
+      logger.info "Some steps require admin privileges."
+      system("sudo -v")
+      # Keep sudo alive in the background for the duration of the script
+      @sudo_keepalive = Thread.new do
+        loop do
+          system("sudo -n true")
+          sleep 50
+        end
+      end
+    end
 
     def parse_options
       @parser = OptionParser.new do |opts|
