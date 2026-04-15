@@ -9,7 +9,8 @@ module MacSetup
       logger.info "Current hostname: #{current}"
 
       print "Enter new hostname (blank to keep '#{current}'): "
-      name = $stdin.gets.chomp.strip
+      input = $stdin.gets
+      name = input ? input.chomp.strip : ""
       if name.empty?
         logger.info "Keeping current hostname."
         return

@@ -93,7 +93,8 @@ module MacSetup
       selected = []
       MODULES.each do |mod_class|
         print "Run #{mod_class.module_name}? [Y/n] "
-        answer = $stdin.gets.chomp.strip.downcase
+        input = $stdin.gets
+        answer = input ? input.chomp.strip.downcase : ""
         selected << mod_class unless answer == "n"
       end
       selected
