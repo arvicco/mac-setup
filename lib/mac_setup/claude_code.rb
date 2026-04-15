@@ -4,23 +4,19 @@ module MacSetup
   class ClaudeCode < BaseModule
     def run
       install_claude_code unless claude_code_installed?
-      logger.info "Run 'claude' to authenticate and start using Claude Code."
+      # Authentication requires browser login — genuinely interactive
+      logger.info "To authenticate, run: claude"
     end
 
     private
 
     def claude_code_installed?
-      # nvm-managed npm puts binaries under ~/.nvm; source it first
-      cmd.success?(nvm_prefix + "command -v claude")
+      cmd.success?("command -v claude")
     end
 
     def install_claude_code
       logger.info "Installing Claude Code..."
-      cmd.run(nvm_prefix + "npm install -g @anthropic-ai/claude-code", abort_on_fail: true)
-    end
-
-    def nvm_prefix
-      "export NVM_DIR=\"#{Node::NVM_DIR}\" && . \"$NVM_DIR/nvm.sh\" && "
+      cmd.run("npm install -g @anthropic-ai/claude-code", abort_on_fail: true)
     end
   end
 end
