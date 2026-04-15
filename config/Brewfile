@@ -1,6 +1,3 @@
-# Taps
-tap "homebrew/bundle"
-
 # CLI tools
 brew "git"
 brew "gh"
