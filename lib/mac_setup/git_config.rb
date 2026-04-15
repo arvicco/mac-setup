@@ -34,7 +34,7 @@ module MacSetup
     end
 
     def get_config(key)
-      stdout, _, status = cmd.run("git config --global #{key}", abort_on_fail: false)
+      stdout, _, status = cmd.run("git config --global #{key}", quiet: true)
       status.success? ? stdout.strip : ""
     end
 

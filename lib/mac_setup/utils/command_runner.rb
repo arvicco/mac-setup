@@ -12,14 +12,20 @@ module MacSetup
       end
 
       # Run a command, return [stdout, stderr, status]
-      def run(command, abort_on_fail: false)
-        logger.info "$ #{command}"
+      # quiet: true suppresses error logging (for commands where failure is expected)
+      def run(command, abort_on_fail: false, quiet: false)
+        logger.info "$ #{command}" unless quiet
         stdout, stderr, status = Open3.capture3(command)
 
         unless status.success?
-          logger.error "Command failed (exit #{status.exitstatus}): #{command}"
-          logger.error stderr unless stderr.empty?
-          exit 1 if abort_on_fail
+          if abort_on_fail
+            logger.error "Command failed (exit #{status.exitstatus}): #{command}"
+            logger.error stderr unless stderr.empty?
+            exit 1
+          elsif !quiet
+            logger.error "Command failed (exit #{status.exitstatus}): #{command}"
+            logger.error stderr unless stderr.empty?
+          end
         end
 
         [stdout, stderr, status]
