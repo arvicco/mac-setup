@@ -6,8 +6,10 @@ brew "ripgrep"
 brew "tree"
 brew "wget"
 brew "htop"
+brew "defaultbrowser"
 
 # Applications (via Homebrew Cask)
+cask "google-chrome"
 # cask "visual-studio-code"
 # cask "iterm2"
 # cask "rectangle"

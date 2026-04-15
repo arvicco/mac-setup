@@ -2,14 +2,19 @@
 
 module MacSetup
   class Cask < BaseModule
-    # Cask apps are declared in config/Brewfile under the "cask" entries.
-    # This module exists as a placeholder for any cask-specific logic
-    # (e.g., post-install configuration, verifying app launches).
-
     def run
-      # TODO: Add cask-specific post-install steps here
-      logger.info "Cask apps are installed via Brewfile (see Homebrew module)."
-      logger.info "Add post-install configuration here as needed."
+      set_default_browser
+    end
+
+    private
+
+    def set_default_browser
+      if File.exist?("/Applications/Google Chrome.app")
+        logger.info "Setting Google Chrome as default browser..."
+        cmd.run("defaultbrowser chrome", abort_on_fail: false)
+      else
+        logger.warn "Google Chrome not found — skipping default browser setup."
+      end
     end
   end
 end
