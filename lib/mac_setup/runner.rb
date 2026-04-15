@@ -5,13 +5,15 @@ require "optparse"
 module MacSetup
   class Runner
     MODULES = [
+      Hostname,
       Homebrew,
+      Node,
+      ClaudeCode,
       Cask,
       MacosDefaults,
       GitConfig,
       Shell,
-      Ssh,
-      Node
+      Ssh
     ].freeze
 
     def initialize(argv = [])

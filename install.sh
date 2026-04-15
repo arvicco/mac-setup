@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/vb/mac-setup.git"
+REPO_URL="https://github.com/arvicco/mac-setup.git"
 INSTALL_DIR="$HOME/mac-setup"
 
 echo "==> Mac Setup Bootstrap"

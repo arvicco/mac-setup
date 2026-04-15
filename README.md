@@ -34,13 +34,15 @@ ruby bin/setup homebrew   # Run specific module(s) by name
 
 ## Setup Steps (in execution order)
 
-1. **Homebrew** — Installs Homebrew (if missing) and all packages from `config/Brewfile`
-2. **Cask** — Post-install configuration for Homebrew Cask apps
-3. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
-4. **Git Config** — Sets global git configuration (name, email, default branch, editor)
-5. **Shell** — Installs Oh My Zsh (if missing) and configures zsh
-6. **SSH** — Generates an ed25519 SSH key (if missing) and adds it to the macOS keychain
-7. **Node** — Installs nvm and Node.js LTS
+1. **Hostname** — Prompts for a machine name and sets HostName, ComputerName, and LocalHostName via `scutil`
+2. **Homebrew** — Installs Homebrew (if missing) and all packages from `config/Brewfile`
+3. **Node** — Installs nvm and Node.js LTS
+4. **Claude Code** — Installs Claude Code CLI via npm (`@anthropic-ai/claude-code`)
+5. **Cask** — Post-install configuration for Homebrew Cask apps
+6. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
+7. **Git Config** — Sets global git configuration (name, email, default branch, editor)
+8. **Shell** — Installs Oh My Zsh (if missing) and configures zsh
+9. **SSH** — Generates an ed25519 SSH key (if missing) and adds it to the macOS keychain
 
 ## Customization
 
