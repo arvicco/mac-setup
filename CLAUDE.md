@@ -12,7 +12,9 @@ Self-contained Ruby CLI that automates setting up a new MacBook. Runs on macOS s
 - `lib/mac_setup/utils/logger.rb` — colored terminal output (`info`, `success`, `warn`, `error`)
 - `lib/mac_setup/utils/command_runner.rb` — wraps `Open3.capture3`; `run()` returns `[stdout, stderr, status]`, `success?()` returns bool
 - `config/` — declarative configuration: `Brewfile` (Homebrew bundle), `macos_defaults.yml` (YAML array of `{domain, key, type, value}`)
-- `install.sh` — bootstrap for fresh Macs: installs Xcode CLT, clones repo, runs `ruby bin/setup`
+- `install-gui.sh` — GUI-mode bootstrap for fresh Macs (runs on target): installs Xcode CLT, clones repo, runs `ruby bin/setup`
+- `install-ssh-controller.sh` — SSH-mode bootstrap (runs on a controller Mac): installs pubkey/NOPASSWD sudo/CLT on target, rsyncs repo, runs `ruby bin/setup --all` over SSH
+- `install-ssh-target.sh` — SSH-mode finishing touches (runs on target after login): default browser, SSH keychain, Finder/Dock restart
 - `MacSetup::ROOT` (defined in `lib/mac_setup.rb`) — absolute path to repo root, used by modules to resolve config files
 
 ## Testing
