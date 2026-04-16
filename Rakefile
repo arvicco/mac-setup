@@ -2,6 +2,8 @@
 
 require "rake/testtask"
 
+Dir["tasks/*.rake"].each { |f| load f }
+
 Rake::TestTask.new("test:unit") do |t|
   t.libs << "lib" << "test"
   t.pattern = "test/unit/**/test_*.rb"
