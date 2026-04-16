@@ -8,16 +8,14 @@ module MacSetup
       current = current_hostname
       logger.info "Current hostname: #{current}"
 
-      print "Enter new hostname (blank to keep '#{current}'): "
-      input = $stdin.gets
-      name = input ? input.chomp.strip : ""
-      if name.empty?
+      name = options[:hostname] || prompt_for_hostname(current)
+      if name.nil? || name.empty?
         logger.info "Keeping current hostname."
         return
       end
 
       SCUTIL_KEYS.each do |key|
-        cmd.run("sudo scutil --set #{key} #{name}", abort_on_fail: true)
+        cmd.run("sudo", "scutil", "--set", key, name, abort_on_fail: true)
       end
 
       logger.success "Hostname set to '#{name}'."
@@ -25,8 +23,14 @@ module MacSetup
 
     private
 
+    def prompt_for_hostname(current)
+      print "Enter new hostname (blank to keep '#{current}'): "
+      input = $stdin.gets
+      input ? input.chomp.strip : ""
+    end
+
     def current_hostname
-      stdout, = cmd.run("scutil --get ComputerName", abort_on_fail: false)
+      stdout, _stderr, _status = cmd.run("scutil", "--get", "ComputerName", abort_on_fail: false)
       stdout.strip
     end
   end

@@ -19,7 +19,12 @@ module MacSetup
 
     def install_homebrew
       logger.info "Installing Homebrew..."
-      cmd.run('/bin/bash -c "$(curl -fsSL ' + BREW_INSTALL_URL + ')"', abort_on_fail: true)
+      # NONINTERACTIVE=1 skips the "Press RETURN to continue" prompt so this
+      # works in headless VM runs (see tasks/vm.rake).
+      cmd.run(
+        %(NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL #{BREW_INSTALL_URL})"),
+        abort_on_fail: true
+      )
     end
 
     def configure_path
@@ -31,10 +36,8 @@ module MacSetup
       end
 
       # Ensure brew shellenv is in .zprofile for future shells
-      zprofile = File.expand_path("~/.zprofile")
       shellenv_line = 'eval "$(/opt/homebrew/bin/brew shellenv)"'
-      unless File.exist?(zprofile) && File.read(zprofile).include?(shellenv_line)
-        File.open(zprofile, "a") { |f| f.puts("", shellenv_line) }
+      if Utils::FileEditor.ensure_line_in_file("~/.zprofile", shellenv_line)
         logger.info "Added brew shellenv to ~/.zprofile."
       end
     end
@@ -43,7 +46,7 @@ module MacSetup
       brewfile = File.join(MacSetup::ROOT, "config", "Brewfile")
       if File.exist?(brewfile)
         logger.info "Installing packages from Brewfile..."
-        cmd.run("#{BREW_PATH} bundle --file=#{brewfile}", abort_on_fail: false)
+        cmd.run(BREW_PATH, "bundle", "--file=#{brewfile}", abort_on_fail: false)
       else
         logger.warn "No Brewfile found at #{brewfile}"
       end

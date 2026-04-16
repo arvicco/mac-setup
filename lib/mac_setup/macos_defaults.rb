@@ -21,13 +21,18 @@ module MacSetup
         type = entry["type"]
         value = entry["value"]
 
+        if [domain, key, type, value].any? { |v| v.nil? || v.to_s.empty? }
+          logger.warn "Skipping malformed defaults entry: #{entry.inspect}"
+          next
+        end
+
         logger.info "Setting #{domain} #{key} = #{value}"
-        cmd.run("defaults write #{domain} #{key} -#{type} #{value}")
+        cmd.run("defaults", "write", domain, key, "-#{type}", value.to_s)
       end
 
       logger.info "Restarting affected services..."
-      cmd.run("killall Finder", abort_on_fail: false)
-      cmd.run("killall Dock", abort_on_fail: false)
+      cmd.run("killall", "Finder", abort_on_fail: false)
+      cmd.run("killall", "Dock", abort_on_fail: false)
     end
   end
 end

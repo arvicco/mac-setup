@@ -11,6 +11,7 @@ module MacSetup
       ClaudeCode,
       Cask,
       MacosDefaults,
+      TerminalApp,
       GitConfig,
       Shell,
       Ssh
@@ -43,7 +44,7 @@ module MacSetup
       modules_to_run = select_modules(logger)
 
       modules_to_run.each do |mod_class|
-        mod = mod_class.new(logger: logger, cmd: cmd)
+        mod = mod_class.new(logger: logger, cmd: cmd, options: @options)
         logger.info ""
         logger.info "Running: #{mod.name}"
         logger.info "-" * 40
@@ -79,6 +80,18 @@ module MacSetup
 
         opts.on("-a", "--all", "Run all modules without prompting") do
           @options[:all] = true
+        end
+
+        opts.on("--hostname NAME", "Set machine hostname (skips Hostname prompt)") do |v|
+          @options[:hostname] = v
+        end
+
+        opts.on("--git-name NAME", "Set git user.name (skips GitConfig prompt)") do |v|
+          @options[:git_name] = v
+        end
+
+        opts.on("--git-email EMAIL", "Set git user.email (skips GitConfig prompt)") do |v|
+          @options[:git_email] = v
         end
 
         opts.on("-h", "--help", "Show this help") do

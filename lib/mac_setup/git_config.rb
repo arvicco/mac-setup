@@ -15,10 +15,10 @@ module MacSetup
       current_name = get_config("user.name")
       current_email = get_config("user.email")
 
-      name = prompt("Git name", current_name)
+      name = options[:git_name] || prompt("Git name", current_name)
       set_config("user.name", name) unless name.empty?
 
-      email = prompt("Git email", current_email)
+      email = options[:git_email] || prompt("Git email", current_email)
       set_config("user.email", email) unless email.empty?
     end
 
@@ -34,13 +34,13 @@ module MacSetup
     end
 
     def get_config(key)
-      stdout, _, status = cmd.run("git config --global #{key}", quiet: true)
+      stdout, _, status = cmd.run("git", "config", "--global", key, quiet: true)
       status.success? ? stdout.strip : ""
     end
 
     def set_config(key, value)
       logger.info "git config --global #{key} = #{value}"
-      cmd.run("git config --global #{key} \"#{value}\"")
+      cmd.run("git", "config", "--global", key, value)
     end
   end
 end

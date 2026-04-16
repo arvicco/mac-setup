@@ -2,11 +2,12 @@
 
 module MacSetup
   class BaseModule
-    attr_reader :logger, :cmd
+    attr_reader :logger, :cmd, :options
 
-    def initialize(logger:, cmd:)
+    def initialize(logger:, cmd:, options: {})
       @logger = logger
       @cmd = cmd
+      @options = options
     end
 
     def name

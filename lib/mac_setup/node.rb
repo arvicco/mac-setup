@@ -3,6 +3,7 @@
 module MacSetup
   class Node < BaseModule
     NVM_DIR = File.expand_path("~/.nvm")
+    NVM_VERSION = "0.40.1"
 
     def run
       install_nvm unless nvm_installed?
@@ -18,11 +19,9 @@ module MacSetup
     end
 
     def install_nvm
-      logger.info "Installing nvm..."
-      cmd.run(
-        "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash",
-        abort_on_fail: true
-      )
+      logger.info "Installing nvm #{NVM_VERSION}..."
+      url = "https://raw.githubusercontent.com/nvm-sh/nvm/v#{NVM_VERSION}/install.sh"
+      cmd.run("curl -o- #{url} | bash", abort_on_fail: true)
     end
 
     def install_node_lts
@@ -40,17 +39,14 @@ module MacSetup
     end
 
     def ensure_nvm_in_zshrc
-      zshrc = File.expand_path("~/.zshrc")
-      nvm_snippet = 'export NVM_DIR="$HOME/.nvm"'
-      return if File.exist?(zshrc) && File.read(zshrc).include?(nvm_snippet)
-
-      logger.info "Adding nvm to ~/.zshrc..."
-      File.open(zshrc, "a") do |f|
-        f.puts ""
-        f.puts '# nvm'
-        f.puts 'export NVM_DIR="$HOME/.nvm"'
-        f.puts '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-        f.puts '[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"'
+      block = <<~SH.chomp
+        # nvm
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+        [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+      SH
+      if Utils::FileEditor.ensure_block_in_file("~/.zshrc", 'export NVM_DIR="$HOME/.nvm"', block)
+        logger.info "Added nvm to ~/.zshrc."
       end
     end
 
