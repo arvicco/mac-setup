@@ -18,11 +18,14 @@ info() { printf '\033[36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[33m!!  %s\033[0m\n' "$*" >&2; }
 
 # 1. Default browser
-if [ -x /opt/homebrew/bin/defaultbrowser ]; then
-  info "Setting Chrome as default browser..."
-  /opt/homebrew/bin/defaultbrowser chrome || warn "defaultbrowser returned non-zero — is Chrome installed?"
-else
+if [ ! -x /opt/homebrew/bin/defaultbrowser ]; then
   warn "defaultbrowser not found. Skipping. (It should be installed via Brewfile.)"
+elif [ ! -d "/Applications/Google Chrome.app" ]; then
+  warn "Google Chrome.app not present in /Applications — skipping default-browser step."
+else
+  info "Setting Chrome as default browser..."
+  /opt/homebrew/bin/defaultbrowser chrome \
+    || warn "defaultbrowser returned non-zero. Chrome may need to be launched once before LaunchServices registers it."
 fi
 
 # 2. SSH key to macOS keychain

@@ -8,7 +8,8 @@ Self-contained Ruby CLI that automates setting up a new MacBook. Runs on macOS s
 ### Architecture
 - `bin/setup` → `MacSetup::Runner` parses CLI args, instantiates a shared `Logger` + `CommandRunner`, then iterates `Runner::MODULES` creating each module with those dependencies and calling `#run`
 - `lib/mac_setup/base_module.rb` — base class; subclasses implement `#run`. `self.module_name` auto-derives a display name from the class name
-- `lib/mac_setup/*.rb` — individual setup modules (Homebrew, Cask, MacosDefaults, GitConfig, Shell, Ssh, Node)
+- `lib/mac_setup/*.rb` — individual setup modules (Hostname, Homebrew, Node, ClaudeCode, Cask, MacosDefaults, TerminalApp, GitConfig, Shell, Ssh). Execution order is defined by `Runner::MODULES` in `lib/mac_setup/runner.rb` and mirrored in README.md.
+- `lib/mac_setup/utils/file_editor.rb` — `ensure_line_in_file` / `ensure_block_in_file` helpers for idempotent shell-config edits
 - `lib/mac_setup/utils/logger.rb` — colored terminal output (`info`, `success`, `warn`, `error`)
 - `lib/mac_setup/utils/command_runner.rb` — wraps `Open3.capture3`; `run()` returns `[stdout, stderr, status]`, `success?()` returns bool
 - `config/` — declarative configuration: `Brewfile` (Homebrew bundle), `macos_defaults.yml` (YAML array of `{domain, key, type, value}`)

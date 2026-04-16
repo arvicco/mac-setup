@@ -162,6 +162,10 @@ class VMTest
     ]
   end
 
+  # Cleanup caveat: at_exit runs on normal exit, abort, and typical signals
+  # (INT, TERM), but NOT on SIGKILL or a process crash. If this task is
+  # kill -9'd, the clone and its /tmp/*.log persist — clean up manually:
+  #   tart stop <name> && tart delete <name>
   def install_cleanup_hook
     at_exit do
       if KEEP_ON_EXIT

@@ -88,6 +88,9 @@ else
   info "Installing Xcode Command Line Tools (this can take several minutes)..."
   # Well-known softwareupdate trick: touch the in-progress sentinel so
   # softwareupdate -l lists CLT without triggering the GUI dialog.
+  # The awk below is double-escaped because the whole script body is in
+  # single quotes (so bash passes it verbatim) but ssh then re-evaluates
+  # it in the remote shell: \\ → \ remotely, so awk sees a literal \*.
   if ! ssh "${SSH_OPTS[@]}" "$TARGET_HOST" '
     set -e
     sudo touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
@@ -107,7 +110,10 @@ fi
 
 # ---------------------------------------------------------------- 5. Auto-updates off
 info "Disabling softwareupdate auto-schedule..."
-ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "sudo softwareupdate --schedule off" >/dev/null
+# Soft-fail: right after CLT install the softwareupdate daemon can be
+# transiently unreachable; don't let that kill the whole bootstrap.
+ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "sudo softwareupdate --schedule off" >/dev/null \
+  || warn "Could not disable softwareupdate schedule — continuing anyway."
 
 # ---------------------------------------------------------------- 6. Rsync repo
 info "Rsyncing repo to $TARGET_HOST:~/mac-setup..."
@@ -118,8 +124,13 @@ rsync -az --delete \
 
 # ---------------------------------------------------------------- 7. Run bin/setup
 info "Running bin/setup on target..."
-# Pass setup args through ssh with proper shell quoting.
-printf -v QUOTED ' %q' "${SETUP_ARGS[@]}"
+# Pass setup args through ssh with proper shell quoting. bash 3.2 (macOS
+# default) dies on "${array[@]}" when the array is empty under `set -u`,
+# so gate on length first.
+QUOTED=""
+if [ ${#SETUP_ARGS[@]} -gt 0 ]; then
+  printf -v QUOTED ' %q' "${SETUP_ARGS[@]}"
+fi
 ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "cd ~/mac-setup && ruby bin/setup --all${QUOTED}"
 
 info "Done on the controller side."

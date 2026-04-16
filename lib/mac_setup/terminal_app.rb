@@ -27,6 +27,11 @@ module MacSetup
         return
       end
 
+      unless File.exist?(PLIST)
+        logger.info "No Terminal.app plist at #{PLIST} (Terminal has never launched). Skipping."
+        return
+      end
+
       profile = active_profile
       unless profile
         logger.warn "Could not read Terminal.app 'Default Window Settings'. Skipping."
@@ -61,14 +66,18 @@ module MacSetup
     end
 
     def install_binding(profile)
+      # Drop any cached prefs BEFORE we edit the file, so cfprefsd can't
+      # race in with a stale copy while PlistBuddy writes.
+      cmd.run("killall", "cfprefsd", abort_on_fail: false, quiet: true)
+
       ensure_bound_keys_dict(profile)
       path = "#{base_path(profile)}:#{SHIFT_RETURN_KEY}"
       cmd.run(
         PLIST_BUDDY, "-c", "Add #{path} string #{SHIFT_RETURN_VALUE}", PLIST,
         abort_on_fail: true
       )
-      # Force cfprefsd to drop its cached copy so the next Terminal.app
-      # launch reads the new value from disk.
+      # And again after, so the next process that reads Terminal prefs
+      # goes to disk instead of cfprefsd's pre-edit cache.
       cmd.run("killall", "cfprefsd", abort_on_fail: false, quiet: true)
       logger.success "Shift+Return bound to ESC+CR in profile '#{profile}'."
       logger.info "Relaunch Terminal.app for the binding to take effect."
