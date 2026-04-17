@@ -30,11 +30,11 @@ module MacSetup
     private
 
     def age_installed?
-      cmd.success?("command", "-v", "age")
+      cmd.success?("command -v age")
     end
 
     def decrypt
-      passphrase = options[:passphrase] || prompt_passphrase
+      passphrase = options[:passphrase] || ENV["AGE_PASSPHRASE"] || prompt_passphrase
       if passphrase.nil? || passphrase.empty?
         logger.warn "No passphrase provided. Skipping secrets decryption."
         return
@@ -43,6 +43,8 @@ module MacSetup
       logger.info "Decrypting config/personal.age..."
 
       tmp = Tempfile.new(["personal", ".tar.gz"])
+      tmp.close
+      File.unlink(tmp.path)
       begin
         success, stderr = age_decrypt(passphrase, tmp.path)
 
@@ -64,8 +66,7 @@ module MacSetup
 
         logger.success "Personal config decrypted to config/personal/."
       ensure
-        tmp.close
-        tmp.unlink
+        File.unlink(tmp.path) if File.exist?(tmp.path)
       end
     end
 
@@ -78,10 +79,14 @@ module MacSetup
 
       # Tcl strings use $ for variable interpolation, so we pass the
       # passphrase via env var to avoid escaping hell.
-      script = 'set passphrase $env(AGE_PASSPHRASE); ' \
+      script = 'set timeout 30; ' \
+        'set passphrase $env(AGE_PASSPHRASE); ' \
         "spawn age -d -o #{escaped_out} #{escaped_in}; " \
-        'expect "Enter passphrase:"; ' \
-        'send "$passphrase\r"; ' \
+        'expect {' \
+        '  "Enter passphrase:" { send "$passphrase\r" }' \
+        '  timeout { exit 1 }' \
+        '  eof { exit 1 }' \
+        '}; ' \
         'expect eof; ' \
         'lassign [wait] _ _ _ code; ' \
         'exit $code'

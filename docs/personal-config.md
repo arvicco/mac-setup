@@ -92,19 +92,22 @@ ruby bin/setup
 
 ### SSH mode
 
+Preferred — pass via env var (not visible in `ps` output):
+
+```bash
+AGE_PASSPHRASE="your-passphrase" ./install-ssh-controller.sh <target-ip> \
+  --hostname my-mac
+```
+
+Or via CLI flag (visible in `ps` briefly — use only when env var isn't practical):
+
 ```bash
 ./install-ssh-controller.sh <target-ip> \
   --hostname my-mac \
   --passphrase "your-passphrase"
 ```
 
-Or pass via env to avoid shell history:
-
-```bash
-MAC_SETUP_PASSPHRASE="..." ./install-ssh-controller.sh <target-ip> --hostname my-mac
-```
-
-(Add `--passphrase "$MAC_SETUP_PASSPHRASE"` support in install-ssh-controller.sh, or let the Secrets module read it from options.)
+Priority: `--passphrase` flag > `AGE_PASSPHRASE` env var > interactive prompt.
 
 ---
 
@@ -155,5 +158,5 @@ Add more files as you add modules that need personal config. The Secrets module 
 
 - The encrypted file is safe to commit to a public repo. `age` uses scrypt for passphrase-based key derivation — brute-force is impractical with a reasonable passphrase.
 - The decrypted directory (`config/personal/`) is gitignored. It exists only on machines where the passphrase has been entered.
-- The `--passphrase` CLI flag passes the value via process arguments, which are briefly visible in `ps` output. For higher security, use the interactive prompt (GUI mode) or pipe via env var.
+- The `--passphrase` CLI flag passes the value via process arguments, which are briefly visible in `ps` output. Prefer the `AGE_PASSPHRASE` env var (not visible in `ps`) or the interactive prompt (GUI mode) for better security.
 - SSH private keys are NOT stored in `config/personal/` — they're generated fresh per machine by the Ssh module. Only the SSH *config* (host aliases, options) is shared.
