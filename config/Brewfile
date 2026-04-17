@@ -1,4 +1,5 @@
 # CLI tools
+brew "age"
 brew "git"
 brew "gh"
 brew "jq"
@@ -9,6 +10,7 @@ brew "htop"
 brew "defaultbrowser"
 
 # Applications (via Homebrew Cask)
+cask "claude-code"
 cask "google-chrome"
 # cask "visual-studio-code"
 # cask "iterm2"

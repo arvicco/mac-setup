@@ -40,9 +40,11 @@ class VMTest
 
   # Values passed to the script's non-interactive flags. Override per run
   # via env if you want to see a specific hostname/identity in the VM.
-  TEST_HOSTNAME  = ENV.fetch("MAC_SETUP_TEST_HOSTNAME", "mac-setup-test")
-  TEST_GIT_NAME  = ENV.fetch("MAC_SETUP_TEST_GIT_NAME", "Mac Setup Test")
-  TEST_GIT_EMAIL = ENV.fetch("MAC_SETUP_TEST_GIT_EMAIL", "test@example.com")
+  TEST_HOSTNAME   = ENV.fetch("MAC_SETUP_TEST_HOSTNAME", "mac-setup-test")
+  TEST_GIT_NAME   = ENV.fetch("MAC_SETUP_TEST_GIT_NAME", "Mac Setup Test")
+  TEST_GIT_EMAIL  = ENV.fetch("MAC_SETUP_TEST_GIT_EMAIL", "test@example.com")
+  TEST_PASSPHRASE = ENV.fetch("MAC_SETUP_TEST_PASSPHRASE", "test-passphrase")
+  TEST_FIXTURE    = File.join(File.expand_path("..", __dir__), "test", "fixtures", "personal.age")
 
   REPO_ROOT    = File.expand_path("..", __dir__)
   GUEST_REPO   = "/Users/#{SSH_USER}/mac-setup"
@@ -55,6 +57,7 @@ class VMTest
     ip = wait_for_ip
     wait_for_ssh(ip)
     rsync_repo(ip)
+    install_test_secrets(ip)
     run_setup(ip)
     log "✓ Setup completed in VM (ip=#{ip})"
   end
@@ -120,12 +123,25 @@ class VMTest
     )
   end
 
+  def install_test_secrets(ip)
+    if File.exist?(TEST_FIXTURE)
+      log "Copying test secrets fixture to guest config/personal.age"
+      sh!(
+        "scp", *ssh_opts,
+        TEST_FIXTURE, "#{SSH_USER}@#{ip}:#{GUEST_REPO}/config/personal.age"
+      )
+    else
+      log "No test fixture at #{TEST_FIXTURE} — Secrets module will skip."
+    end
+  end
+
   def run_setup(ip)
     setup_args = [
       "--all",
       "--hostname", TEST_HOSTNAME,
       "--git-name", TEST_GIT_NAME,
-      "--git-email", TEST_GIT_EMAIL
+      "--git-email", TEST_GIT_EMAIL,
+      "--passphrase", TEST_PASSPHRASE
     ]
     log "Running bin/setup #{Shellwords.join(setup_args)}"
     remote = "cd #{Shellwords.escape(GUEST_REPO)} && ruby bin/setup #{Shellwords.join(setup_args)}"

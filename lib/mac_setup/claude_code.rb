@@ -3,8 +3,12 @@
 module MacSetup
   class ClaudeCode < BaseModule
     def run
-      install_claude_code unless claude_code_installed?
-      # Authentication requires browser login — genuinely interactive
+      if claude_code_installed?
+        logger.info "Claude Code already installed."
+      else
+        logger.warn "Claude Code not found — it should have been installed via Brewfile."
+        logger.warn "Run: brew install --cask claude-code"
+      end
       logger.info "To authenticate, run: claude"
     end
 
@@ -12,11 +16,6 @@ module MacSetup
 
     def claude_code_installed?
       cmd.success?("command -v claude")
-    end
-
-    def install_claude_code
-      logger.info "Installing Claude Code..."
-      cmd.run("npm install -g @anthropic-ai/claude-code", abort_on_fail: true)
     end
   end
 end

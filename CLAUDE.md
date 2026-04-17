@@ -42,6 +42,7 @@ Self-contained Ruby CLI that automates setting up a new MacBook. Runs on macOS s
 - `frozen_string_literal: true` in every Ruby file
 - **Idempotency is mandatory.** Every module must be safe to re-run. Always check state before acting (file exists? tool installed? key present?). Never assume a clean slate.
 - **Config-driven over code-driven.** When possible, new setup steps should be data in `config/` (Brewfile entries, YAML defaults) rather than new Ruby code. Keep the common case trivial.
+- **Homebrew is the preferred package manager.** If a tool is available via `brew` or `brew --cask`, install it through the Brewfile rather than npm, pip, curl-to-bash, or other managers. This keeps installs declarative, updatable via `brew upgrade`, and avoids runtime dependencies (e.g., Claude Code is a cask, not an npm global).
 - **Refactoring is a deliberate, separate step** — it happens after tests are green, changes no external behavior, and gets its own commit
 
 ### Adding a new module

@@ -7,6 +7,7 @@ module MacSetup
     MODULES = [
       Hostname,
       Homebrew,
+      Secrets,
       Node,
       ClaudeCode,
       Cask,
@@ -92,6 +93,10 @@ module MacSetup
 
         opts.on("--git-email EMAIL", "Set git user.email (skips GitConfig prompt)") do |v|
           @options[:git_email] = v
+        end
+
+        opts.on("--passphrase PASS", "Passphrase for decrypting config/personal.age") do |v|
+          @options[:passphrase] = v
         end
 
         opts.on("-h", "--help", "Show this help") do

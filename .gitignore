@@ -12,6 +12,9 @@
 .LSOverride
 ._*
 
+# Decrypted personal config (secrets, dotfiles, etc.)
+/config/personal/
+
 # Editor
 *.swp
 *.swo

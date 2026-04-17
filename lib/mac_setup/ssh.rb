@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
+require "fileutils"
+
 module MacSetup
   class Ssh < BaseModule
     SSH_DIR = File.expand_path("~/.ssh")
+    SSH_CONFIG_SOURCE = File.join("config", "personal", "ssh_config")
 
     def run
       generate_key unless key_exists?
+      install_ssh_config
       configure_ssh_agent
     end
 
@@ -24,6 +28,22 @@ module MacSetup
       )
       logger.info "Public key:"
       puts File.read(File.join(SSH_DIR, "id_ed25519.pub"))
+    end
+
+    def install_ssh_config
+      source = File.join(MacSetup::ROOT, SSH_CONFIG_SOURCE)
+      return unless File.exist?(source)
+
+      dest = File.join(SSH_DIR, "config")
+      if File.exist?(dest) && File.read(dest) == File.read(source)
+        logger.info "~/.ssh/config already up to date."
+        return
+      end
+
+      Dir.mkdir(SSH_DIR, 0o700) unless File.directory?(SSH_DIR)
+      FileUtils.cp(source, dest)
+      File.chmod(0o600, dest)
+      logger.success "Installed ~/.ssh/config from #{SSH_CONFIG_SOURCE}."
     end
 
     def configure_ssh_agent
