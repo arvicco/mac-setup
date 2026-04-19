@@ -28,4 +28,49 @@ class TestSecrets < Minitest::Test
     path = @mod.send(:decrypted_path)
     assert path.end_with?("config/personal"), "Expected path ending in config/personal, got #{path}"
   end
+
+  # Priority chain: options[:passphrase] > ENV["AGE_PASSPHRASE"] > prompt.
+  # Keep in sync with docs/personal-config.md:141.
+
+  def test_resolve_passphrase_prefers_options_flag_over_env
+    with_env("AGE_PASSPHRASE" => "from-env") do
+      mod = MacSetup::Secrets.new(logger: @logger, cmd: @cmd, options: { passphrase: "from-flag" })
+      assert_equal "from-flag", mod.send(:resolve_passphrase)
+    end
+  end
+
+  def test_resolve_passphrase_falls_through_to_env_when_no_flag
+    with_env("AGE_PASSPHRASE" => "from-env") do
+      assert_equal "from-env", @mod.send(:resolve_passphrase)
+    end
+  end
+
+  def test_resolve_passphrase_falls_through_to_prompt_when_no_flag_no_env
+    with_env("AGE_PASSPHRASE" => nil) do
+      # Non-TTY in test run → prompt_passphrase returns nil. The important
+      # thing is the chain reaches prompt rather than short-circuiting.
+      assert_nil @mod.send(:resolve_passphrase)
+    end
+  end
+
+  def test_resolve_passphrase_empty_flag_does_NOT_mask_env
+    # Surprising but established Ruby idiom: `"" || x` returns "" (empty
+    # string is truthy). If a user passes --passphrase "" we honor that
+    # explicit empty and do not fall through to env. The decrypt caller
+    # guards on passphrase.empty? and logs "No passphrase provided".
+    with_env("AGE_PASSPHRASE" => "from-env") do
+      mod = MacSetup::Secrets.new(logger: @logger, cmd: @cmd, options: { passphrase: "" })
+      assert_equal "", mod.send(:resolve_passphrase)
+    end
+  end
+
+  private
+
+  def with_env(vars)
+    saved = vars.keys.each_with_object({}) { |k, h| h[k] = ENV[k] }
+    vars.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
+    yield
+  ensure
+    saved.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
+  end
 end

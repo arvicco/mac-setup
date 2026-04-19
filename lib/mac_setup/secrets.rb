@@ -33,7 +33,7 @@ module MacSetup
     end
 
     def decrypt
-      passphrase = options[:passphrase] || ENV["AGE_PASSPHRASE"] || prompt_passphrase
+      passphrase = resolve_passphrase
       if passphrase.nil? || passphrase.empty?
         logger.warn "No passphrase provided. Skipping secrets decryption."
         return
@@ -80,6 +80,14 @@ module MacSetup
         stdin_data: "#{passphrase}\n"
       )
       [status.success?, stderr]
+    end
+
+    # Priority: --passphrase CLI flag (argv, visible in ps briefly) >
+    # AGE_PASSPHRASE env var (not visible in ps) > interactive TTY prompt
+    # (GUI-mode only; returns nil in non-interactive sessions).
+    # Documented in docs/personal-config.md:141; keep in sync.
+    def resolve_passphrase
+      options[:passphrase] || ENV["AGE_PASSPHRASE"] || prompt_passphrase
     end
 
     def prompt_passphrase

@@ -33,30 +33,37 @@ module MacSetup
       source_dir = File.join(MacSetup::ROOT, SETTINGS_SOURCE_DIR)
       return unless File.directory?(source_dir)
 
-      deployed = 0
-      SETTINGS_FILES.each do |name|
-        source = File.join(source_dir, name)
-        next unless File.exist?(source)
-        dest = File.join(CLAUDE_DIR, name)
+      any_source = SETTINGS_FILES.any? { |n| File.exist?(File.join(source_dir, n)) }
+      unless any_source
+        logger.info "No Claude Code settings found in #{SETTINGS_SOURCE_DIR}/."
+        return
+      end
+      SETTINGS_FILES.each { |name| deploy_setting_file(source_dir, CLAUDE_DIR, name) }
+    end
 
-        if File.exist?(dest) && File.read(dest) == File.read(source)
-          logger.info "~/.claude/#{name} already up to date."
-          next
-        end
+    # Returns :installed / :updated / :unchanged / :missing.
+    def deploy_setting_file(source_dir, dest_dir, name)
+      source = File.join(source_dir, name)
+      return :missing unless File.exist?(source)
+      dest = File.join(dest_dir, name)
 
-        if File.exist?(dest)
-          backup = "#{dest}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
-          FileUtils.cp(dest, backup)
-          logger.warn "Backed up existing ~/.claude/#{name} to #{File.basename(backup)}"
-        end
-
-        FileUtils.mkdir_p(CLAUDE_DIR)
-        FileUtils.cp(source, dest)
-        logger.success "Installed ~/.claude/#{name}."
-        deployed += 1
+      if File.exist?(dest) && File.read(dest) == File.read(source)
+        logger.info "#{dest} already up to date."
+        return :unchanged
       end
 
-      logger.info "No Claude Code settings found in #{SETTINGS_SOURCE_DIR}/." if deployed.zero? && SETTINGS_FILES.none? { |n| File.exist?(File.join(source_dir, n)) }
+      result = :installed
+      if File.exist?(dest)
+        backup = "#{dest}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
+        FileUtils.cp(dest, backup)
+        logger.warn "Backed up existing #{dest} to #{File.basename(backup)}"
+        result = :updated
+      end
+
+      FileUtils.mkdir_p(dest_dir)
+      FileUtils.cp(source, dest)
+      logger.success "Installed #{dest}."
+      result
     end
   end
 end
