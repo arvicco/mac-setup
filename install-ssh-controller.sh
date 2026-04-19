@@ -138,6 +138,12 @@ fi
 # target. Stdin is seen by neither. The remote shell reads one line,
 # exports it, then runs bin/setup which picks it up via ENV.
 if [ -n "${AGE_PASSPHRASE:-}" ]; then
+  # `read -r` stops at the first newline, so a multi-line passphrase
+  # would silently truncate and downstream `age -d` would fail with a
+  # confusing "wrong passphrase" message. Fail loudly here instead.
+  case "$AGE_PASSPHRASE" in
+    *$'\n'*) die "AGE_PASSPHRASE must be a single line (no newlines)." ;;
+  esac
   info "Passing AGE_PASSPHRASE to the target over stdin."
   ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "
     IFS= read -r AGE_PASSPHRASE

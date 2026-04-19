@@ -193,7 +193,7 @@ ruby bin/setup secrets
 | `rclone.conf` | rclone INI-style config (OAuth tokens for cloud remotes) | Rclone module — copied to `~/.config/rclone/rclone.conf` (0600) |
 | `iterm2.plist` | binary plist | iTerm2 module — copied to `~/Library/Preferences/com.googlecode.iterm2.plist` (skipped if iTerm2 running) |
 | `gh_token` | Plain text, one line | GithubAuth module — runs `gh auth login --with-token` + `gh ssh-key add` |
-| `claude/settings.json`, `claude/settings.local.json` | JSON | ClaudeCode module — copied into `~/.claude/` (existing targets backed up to `.bak-<timestamp>`) |
+| `claude/settings.json`, `claude/settings.local.json` | JSON | ClaudeCode module — copied into `~/.claude/` (existing targets backed up to `.bak-<timestamp>`). Note: `settings.local.json` is per-machine by convention — it can carry absolute paths and trust decisions from the source Mac, so review after first run if you harvested from a different machine. |
 | `macos_defaults_discovered.yml` | YAML | Manual review → merge into `config/macos_defaults.yml` |
 | `Brewfile.discovered` | Brewfile format | Manual review → merge into `config/Brewfile` |
 | `keyboard_remapping.json` | hidutil JSON | Manual review → future Keyboard module |
