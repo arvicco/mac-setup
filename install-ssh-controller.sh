@@ -131,7 +131,22 @@ QUOTED=""
 if [ ${#SETUP_ARGS[@]} -gt 0 ]; then
   printf -v QUOTED ' %q' "${SETUP_ARGS[@]}"
 fi
-ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "cd ~/mac-setup && ruby bin/setup --all${QUOTED}"
+
+# Propagate AGE_PASSPHRASE over stdin rather than argv. Putting the
+# passphrase in ssh's argv would expose it in `ps` on the controller;
+# putting it in the remote command string would expose it in `ps` on the
+# target. Stdin is seen by neither. The remote shell reads one line,
+# exports it, then runs bin/setup which picks it up via ENV.
+if [ -n "${AGE_PASSPHRASE:-}" ]; then
+  info "Passing AGE_PASSPHRASE to the target over stdin."
+  ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "
+    IFS= read -r AGE_PASSPHRASE
+    export AGE_PASSPHRASE
+    cd ~/mac-setup && ruby bin/setup --all${QUOTED}
+  " <<< "$AGE_PASSPHRASE"
+else
+  ssh "${SSH_OPTS[@]}" "$TARGET_HOST" "cd ~/mac-setup && ruby bin/setup --all${QUOTED}"
+fi
 
 info "Done on the controller side."
 info ""
