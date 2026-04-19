@@ -187,18 +187,18 @@ ruby bin/setup secrets
 | `dotfiles/.zshrc`, etc. | Shell config files | Shell module — copied into `~/` (existing targets get `.bak-<timestamp>` backups) |
 | `git_identity.yml` | YAML: `name`, `email` | GitConfig module |
 | `ssh_config` | Standard SSH config format | Ssh module (copied to `~/.ssh/config`) |
-| `known_hosts` | SSH known hosts | Ssh module (planned — merge not yet implemented) |
+| `known_hosts` | SSH known hosts | Ssh module — union-merged into `~/.ssh/known_hosts` (no duplicates, existing entries preserved) |
 | `tailscale.yml` | YAML: `oauth_client_id`, `oauth_client_secret`, `tags`, `extra_up_args` (opt) | Tailscale module — mints single-use auth keys via OAuth to join the tailnet |
 | `autologin.yml` | YAML: `username`, `password` | AutoLogin module — `sysadminctl -autologin set` so the Mac boots straight to desktop after power outage (FileVault must be OFF) |
 | `rclone.conf` | rclone INI-style config (OAuth tokens for cloud remotes) | Rclone module — copied to `~/.config/rclone/rclone.conf` (0600) |
 | `iterm2.plist` | binary plist | iTerm2 module — copied to `~/Library/Preferences/com.googlecode.iterm2.plist` (skipped if iTerm2 running) |
 | `gh_token` | Plain text, one line | GithubAuth module — runs `gh auth login --with-token` + `gh ssh-key add` |
-| `claude/settings.json` | JSON | ClaudeCode module (planned) |
+| `claude/settings.json`, `claude/settings.local.json` | JSON | ClaudeCode module — copied into `~/.claude/` (existing targets backed up to `.bak-<timestamp>`) |
 | `macos_defaults_discovered.yml` | YAML | Manual review → merge into `config/macos_defaults.yml` |
 | `Brewfile.discovered` | Brewfile format | Manual review → merge into `config/Brewfile` |
 | `keyboard_remapping.json` | hidutil JSON | Manual review → future Keyboard module |
 
-Files marked "planned" are harvested now but the modules that consume them are not yet implemented. The Secrets module just decrypts the tarball — individual modules decide what to read from `config/personal/`.
+Files marked "Manual review" are harvested as hints but are not auto-applied — their shape is specific enough that human review before merging into tracked config is safer than a blind copy. The Secrets module just decrypts the tarball; individual modules decide what to read from `config/personal/`.
 
 ---
 

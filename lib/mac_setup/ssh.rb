@@ -6,6 +6,7 @@ module MacSetup
   class Ssh < BaseModule
     SSH_DIR = File.expand_path("~/.ssh")
     SSH_CONFIG_SOURCE = File.join("config", "personal", "ssh_config")
+    KNOWN_HOSTS_SOURCE = File.join("config", "personal", "known_hosts")
 
     # Keys we generate on a fresh Mac. The general-purpose key is for
     # servers/other boxes; the github key is dedicated so that
@@ -19,6 +20,7 @@ module MacSetup
     def run
       KEYS.each { |spec| ensure_key(spec) }
       install_ssh_config
+      merge_known_hosts
       configure_ssh_agent
     end
 
@@ -53,6 +55,40 @@ module MacSetup
       FileUtils.cp(source, dest)
       File.chmod(0o600, dest)
       logger.success "Installed ~/.ssh/config from #{SSH_CONFIG_SOURCE}."
+    end
+
+    # Union-merge harvested known_hosts into the local file. Preserves
+    # existing entries, appends any new ones, drops exact duplicates.
+    # Idempotent — re-running adds nothing. Rotated host keys are a
+    # separate SSH problem we don't try to resolve here.
+    def merge_known_hosts
+      source = File.join(MacSetup::ROOT, KNOWN_HOSTS_SOURCE)
+      return unless File.exist?(source)
+
+      dest = File.join(SSH_DIR, "known_hosts")
+      source_lines = read_host_lines(source)
+      return if source_lines.empty?
+
+      existing = File.exist?(dest) ? read_host_lines(dest) : []
+      new_lines = source_lines - existing
+      if new_lines.empty?
+        logger.info "known_hosts already contains all entries from #{KNOWN_HOSTS_SOURCE}."
+        return
+      end
+
+      FileUtils.mkdir_p(SSH_DIR, mode: 0o700)
+      merged = existing + new_lines
+      File.write(dest, merged.join("\n") + "\n")
+      File.chmod(0o600, dest)
+      logger.success "Merged #{new_lines.length} host entries from #{KNOWN_HOSTS_SOURCE}."
+    end
+
+    # Normalizes whitespace and drops blank + comment lines so the set
+    # difference works on canonical forms.
+    def read_host_lines(path)
+      File.readlines(path).map(&:rstrip).reject do |line|
+        line.empty? || line.start_with?("#")
+      end
     end
 
     def configure_ssh_agent

@@ -80,7 +80,7 @@ ruby bin/setup --all \
 2. **Homebrew** — Installs Homebrew (if missing) and all packages from `config/Brewfile`
 3. **Secrets** — Decrypts `config/personal.age` → `config/personal/` using `age`. Skips if no `.age` file or already decrypted.
 4. **Node** — Installs nvm and Node.js LTS
-5. **Claude Code** — Verifies Claude Code CLI was installed via Brewfile (`cask "claude-code"`)
+5. **Claude Code** — Verifies Claude Code CLI was installed via Brewfile (`cask "claude-code"`). Also deploys `config/personal/claude/settings.json` and `settings.local.json` into `~/.claude/` when present (existing targets backed up to `.bak-<timestamp>`).
 6. **Cask** — Post-install configuration for Homebrew Cask apps
 7. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
 8. **Auto Login** — Enables boot-time auto-login for the user listed in `config/personal/autologin.yml` (home-server pattern: machine comes up unattended after a power outage). Skipped if no config file present. **Requires FileVault to be off** (FileVault forces a password at the boot prompt, which auto-login can't satisfy). The password is briefly visible in `ps` argv while `sysadminctl` runs — acceptable for a single-user machine, not for multi-user boxes.
@@ -92,7 +92,7 @@ ruby bin/setup --all \
 14. **Git Config** — Sets global git configuration (name, email, default branch, editor). Reads from `config/personal/git_identity.yml` when present.
 15. **Shell** — Installs Oh My Zsh (if missing) and **copies** every file in `config/personal/dotfiles/` into `~/` (existing targets → backed up to `.bak-<timestamp>`). Copies (not symlinks) so the dotfiles survive removing the mac-setup checkout after bootstrap.
 16. **iTerm2** — Copies `config/personal/iterm2.plist` to `~/Library/Preferences/com.googlecode.iterm2.plist`. Skipped if iTerm2 is running (it caches prefs in memory and would overwrite on quit).
-17. **SSH** — Generates two ed25519 keys: `~/.ssh/id_ed25519` (general-purpose) and `~/.ssh/id_ed25519_github` (dedicated). Installs `~/.ssh/config` from `config/personal/ssh_config` when present — use `Host github.com / IdentityFile ~/.ssh/id_ed25519_github / IdentitiesOnly yes` to pin the GitHub-only key. Both keys are added to the macOS keychain when a GUI SSH agent is reachable.
+17. **SSH** — Generates two ed25519 keys: `~/.ssh/id_ed25519` (general-purpose) and `~/.ssh/id_ed25519_github` (dedicated). Installs `~/.ssh/config` from `config/personal/ssh_config` when present — use `Host github.com / IdentityFile ~/.ssh/id_ed25519_github / IdentitiesOnly yes` to pin the GitHub-only key. Union-merges `config/personal/known_hosts` into `~/.ssh/known_hosts` (dedup, preserves existing). Both keys are added to the macOS keychain when a GUI SSH agent is reachable.
 18. **GitHub Auth** — Reads `config/personal/gh_token`, runs `gh auth login --with-token` (skip if already authed), then uploads `~/.ssh/id_ed25519_github.pub` via `gh ssh-key add` titled `mac-setup: <hostname>` (skip if GitHub already has that key body).
 19. **Rclone** — Copies `config/personal/rclone.conf` to `~/.config/rclone/rclone.conf` with `0600` permissions (the file holds OAuth tokens for cloud remotes).
 20. **Tailscale** — Joins this Mac to your tailnet. Reads `config/personal/tailscale.yml` (OAuth client creds + tags), installs `tailscaled` as a system daemon (headless, survives reboots), mints a short-lived single-use auth key via the Tailscale API, runs `tailscale up --ssh --accept-dns`.
