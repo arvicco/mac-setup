@@ -30,6 +30,10 @@ module MacSetup
       return if entries.nil? || entries.empty?
 
       ensure_plist_exists
+      # Flush cfprefsd before editing on disk so its in-memory copy
+      # doesn't overwrite PlistBuddy's writes on its next sync. See the
+      # same pattern in KeyboardLayouts.
+      cmd.run("killall", "cfprefsd", abort_on_fail: false, quiet: true)
       entries.each { |entry| apply_entry(entry) }
       reload_prefs
     end

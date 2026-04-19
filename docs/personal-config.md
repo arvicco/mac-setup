@@ -184,10 +184,10 @@ ruby bin/setup secrets
 
 | File | Format | Read by |
 |---|---|---|
-| `dotfiles/.zshrc`, etc. | Shell config files | Shell module (symlinked to ~) |
+| `dotfiles/.zshrc`, etc. | Shell config files | Shell module (planned — symlinking not yet implemented) |
 | `git_identity.yml` | YAML: `name`, `email` | GitConfig module |
 | `ssh_config` | Standard SSH config format | Ssh module (copied to `~/.ssh/config`) |
-| `known_hosts` | SSH known hosts | Ssh module (merged into `~/.ssh/known_hosts`) |
+| `known_hosts` | SSH known hosts | Ssh module (planned — merge not yet implemented) |
 | `gh_token` | Plain text, one line | GithubAuth module (planned) |
 | `claude/settings.json` | JSON | ClaudeCode module (planned) |
 | `macos_defaults_discovered.yml` | YAML | Manual review → merge into `config/macos_defaults.yml` |
