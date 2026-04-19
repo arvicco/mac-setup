@@ -12,7 +12,11 @@ module MacSetup
       ClaudeCode,
       Cask,
       MacosDefaults,
-      TerminalApp,
+      PowerManagement,
+      Security,
+      Karabiner,
+      KeyboardLayouts,
+      KeyboardShortcuts,
       GitConfig,
       Shell,
       Ssh
@@ -113,12 +117,16 @@ module MacSetup
       end
     end
 
+    def normalize_name(name)
+      name.downcase.gsub(/\s+/, "")
+    end
+
     def select_modules(logger)
       return MODULES if @options[:all]
 
       unless @argv.empty?
-        names = @argv.map(&:downcase)
-        return MODULES.select { |m| names.include?(m.module_name.downcase) }
+        names = @argv.map { |n| normalize_name(n) }
+        return MODULES.select { |m| names.include?(normalize_name(m.module_name)) }
       end
 
       selected = []

@@ -1,0 +1,61 @@
+# Keyboard shortcuts — written to com.apple.symbolichotkeys via PlistBuddy.
+#
+# Each entry targets one numeric ID in AppleSymbolicHotKeys:
+#   - id:       numeric shortcut ID (Apple-internal, partially undocumented)
+#   - enabled:  true/false
+#   - ascii:    ASCII code of the key (e.g. 32 = space)
+#   - keycode:  hardware keycode (e.g. 49 = space)
+#   - modifiers: list of [cmd, option, ctrl, shift, fn, caps] — summed into
+#               the modifier bitmask at apply time
+#   - note:    free-text comment for humans; does not affect behavior
+#
+# Parameters (ascii/keycode/modifiers) are only needed when rebinding.
+# To just disable a shortcut, set enabled: false and omit the rest.
+
+# Spotlight — turn off both shortcuts so Cmd+Space is free for input source switching.
+- id: 64
+  enabled: false
+  note: Spotlight — show search (frees Cmd+Space)
+
+- id: 65
+  enabled: false
+  note: Spotlight — show Finder search window
+
+# Input sources — rebind "Select the previous input source" to Cmd+Space.
+- id: 60
+  enabled: true
+  ascii: 32
+  keycode: 49
+  modifiers: [cmd]
+  note: Input sources — previous source (Cmd+Space)
+
+# Accessibility — all shortcuts off (IDs confirmed from live symbolichotkeys dump).
+# VoiceOver (Cmd+F5, likely ID 59) is at the macOS default and not in the
+# plist yet — if you want it off, toggle it once in the GUI and add here.
+- id: 15
+  enabled: false
+  note: Accessibility — Turn zoom on/off (Cmd+Opt+8)
+
+- id: 17
+  enabled: false
+  note: Accessibility — Zoom in (Cmd+Opt+=)
+
+- id: 19
+  enabled: false
+  note: Accessibility — Zoom out (Cmd+Opt+-)
+
+- id: 21
+  enabled: false
+  note: Accessibility — Invert colors (Cmd+Opt+Ctrl+8)
+
+- id: 23
+  enabled: false
+  note: Accessibility — Image smoothing toggle (Cmd+Opt+\)
+
+- id: 25
+  enabled: false
+  note: Accessibility — Increase contrast (Cmd+Opt+Ctrl+.)
+
+- id: 26
+  enabled: false
+  note: Accessibility — Decrease contrast (Cmd+Opt+Ctrl+,)

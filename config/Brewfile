@@ -12,6 +12,7 @@ brew "defaultbrowser"
 # Applications (via Homebrew Cask)
 cask "claude-code"
 cask "google-chrome"
+cask "karabiner-elements"
 # cask "visual-studio-code"
 # cask "iterm2"
 # cask "rectangle"

@@ -1,0 +1,24 @@
+# Custom keyboard layouts beyond Apple's shipped set.
+#
+# - `install` is informational: bundles are installed by scanning
+#   `config/keyboard_layouts/*.bundle` regardless of this list. Declare
+#   entries here only so that `enable` can reference them by id.
+# - `enable` ensures these input sources are present in
+#   `AppleEnabledInputSources` (adds if missing, idempotent).
+# - `disable` removes matching entries from `AppleEnabledInputSources`.
+#   This bypasses the macOS Input Sources GUI's "must keep one Apple ASCII
+#   layout" check. Safe because at least one non-ASCII or custom layout
+#   remains enabled.
+#
+# Matching: an entry matches a spec if its `KeyboardLayout ID` equals
+# `keyboard_layout_id` OR its `KeyboardLayout Name` equals `name`.
+# The `keyboard_layout_id` is the `id` attribute in the `.keylayout` XML;
+# Apple-shipped layouts use positive IDs, third-party layouts use negative.
+
+enable:
+  - keyboard_layout_id: -24626
+    name: "Dvorak Plus"
+
+disable:
+  - keyboard_layout_id: 16301
+    name: "DVORAK - QWERTY CMD"

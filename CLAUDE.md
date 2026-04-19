@@ -52,6 +52,13 @@ Self-contained Ruby CLI that automates setting up a new MacBook. Runs on macOS s
 4. Update the sequential step list in `README.md`
 5. Add tests for any non-trivial logic in `test/unit/`
 
+### Setup ↔ Harvest symmetry
+`bin/setup` (applies config) and `bin/harvest` (collects config from a working Mac) are two sides of the same coin. They must stay synchronized:
+- **If a module starts reading a new file from `config/personal/`**, add a corresponding collector in `Harvester` that gathers that file from the live system.
+- **If a new collector is added to `Harvester`**, ensure a module exists (or is planned) that consumes the harvested file during setup. Document planned consumers in the file reference table in `docs/personal-config.md`.
+- **If a config file format changes** (e.g., `git_identity.yml` gains a new key), update both the module that reads it and the harvester that writes it.
+- When reviewing changes that touch either `bin/setup` modules or `lib/mac_setup/harvester.rb`, always ask: "does the other side need updating too?"
+
 ## Work Protocol
 
 ### For ALL tasks:
@@ -74,6 +81,12 @@ Self-contained Ruby CLI that automates setting up a new MacBook. Runs on macOS s
 
 **Never implement a fix speculatively.** "This might help" changes are not allowed.
 If you are unsure about the root cause, say so and ask a clarifying question instead of guessing with code.
+
+### Atomic actions & rollback paths
+- **Never delete or overwrite before the replacement is verified in place.** Order: stage the new version somewhere safe (temp dir, different name) → verify it exists and is correct → *then* remove the old one. Not in one chained command, not "I'll fix it up after."
+- **Don't trust `&&` to protect you** across separate Bash tool calls, or when an earlier step can fail silently (sudo without a TTY, network fetches, commands run under `sh -c`, anything behind an XPC service). If an earlier step might have failed, the destructive step that follows must *not* run. Check exit status explicitly.
+- **Before any irreversible action, answer: "if this goes wrong, how do I restore?"** If the answer is *"ask the user to redo work they already did"* or *"there is no copy anywhere"*, stop. Back out and ask for guidance instead of proceeding.
+- This applies to filesystem writes, plist edits, database mutations, git `reset --hard`, `rm -rf`, destination overwrites — anything that would destroy state the user can't easily reconstruct.
 
 ## Documentation
 - **README.md must always reflect the current state of the code.** When a feature is implemented, changed, or removed, update README.md in the same commit.

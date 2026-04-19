@@ -3,7 +3,6 @@
 require "fileutils"
 require "io/console"
 require "open3"
-require "shellwords"
 require "tempfile"
 
 module MacSetup
@@ -70,30 +69,15 @@ module MacSetup
       end
     end
 
-    # age reads the passphrase from /dev/tty, which requires a pty.
-    # We use expect(1) (ships with macOS) to provide one so this works
-    # both interactively and over SSH.
+    # age reads the passphrase from /dev/tty, which fails when we were
+    # invoked over SSH without -t (no controlling TTY). script(1) allocates
+    # its own pty and runs age inside it; the passphrase fed over stdin is
+    # forwarded through that pty, so age's /dev/tty read succeeds.
     def age_decrypt(passphrase, output_path)
-      escaped_out = Shellwords.escape(output_path)
-      escaped_in  = Shellwords.escape(encrypted_path)
-
-      # Tcl strings use $ for variable interpolation, so we pass the
-      # passphrase via env var to avoid escaping hell.
-      script = 'set timeout 30; ' \
-        'set passphrase $env(AGE_PASSPHRASE); ' \
-        "spawn age -d -o #{escaped_out} #{escaped_in}; " \
-        'expect {' \
-        '  "Enter passphrase:" { send "$passphrase\r" }' \
-        '  timeout { exit 1 }' \
-        '  eof { exit 1 }' \
-        '}; ' \
-        'expect eof; ' \
-        'lassign [wait] _ _ _ code; ' \
-        'exit $code'
-
       _, stderr, status = Open3.capture3(
-        { "AGE_PASSPHRASE" => passphrase },
-        "expect", "-c", script
+        "script", "-q", "/dev/null",
+        "age", "-d", "-o", output_path, encrypted_path,
+        stdin_data: "#{passphrase}\n"
       )
       [status.success?, stderr]
     end

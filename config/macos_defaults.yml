@@ -1,20 +1,267 @@
 # macOS defaults to apply via `defaults write`
-# Each entry: domain, key, type (string/bool/int/float), value
+# Each entry: domain, key, type (string/bool/int/float), value, [sudo]
+# Set `sudo: true` for system-level domains under /Library/Preferences/.
+# User-level domains (NSGlobalDomain, com.apple.*) don't need it.
 
-# Example: show hidden files in Finder
+# Appearance
+- domain: NSGlobalDomain
+  key: AppleInterfaceStyle
+  type: string
+  value: Dark
+
+- domain: NSGlobalDomain
+  key: NSGlassDiffusionSetting
+  type: bool
+  value: true
+
+- domain: NSGlobalDomain
+  key: AppleIconAppearanceTheme
+  type: string
+  value: RegularDark
+
+- domain: NSGlobalDomain
+  key: NSTableViewDefaultSizeMode
+  type: int
+  value: 2
+
+- domain: NSGlobalDomain
+  key: AppleReduceDesktopTinting
+  type: bool
+  value: true
+
+# Dock
+- domain: com.apple.dock
+  key: tilesize
+  type: int
+  value: 24
+
+- domain: com.apple.dock
+  key: magnification
+  type: bool
+  value: true
+
+- domain: com.apple.dock
+  key: largesize
+  type: int
+  value: 56
+
+- domain: com.apple.dock
+  key: orientation
+  type: string
+  value: right
+
+- domain: com.apple.dock
+  key: mineffect
+  type: string
+  value: genie
+
+- domain: NSGlobalDomain
+  key: AppleActionOnDoubleClick
+  type: string
+  value: Maximize
+
+- domain: com.apple.dock
+  key: autohide
+  type: bool
+  value: true
+
+- domain: com.apple.dock
+  key: launchanim
+  type: bool
+  value: true
+
+- domain: com.apple.dock
+  key: show-process-indicators
+  type: bool
+  value: true
+
+- domain: com.apple.dock
+  key: show-recents
+  type: bool
+  value: true
+
+- domain: com.apple.WindowManager
+  key: GloballyEnabled
+  type: bool
+  value: false
+
+# Tiling & Mission Control
+- domain: com.apple.WindowManager
+  key: EnableTiledWindowMargins
+  type: bool
+  value: false
+
+- domain: com.apple.dock
+  key: mru-spaces
+  type: bool
+  value: false
+
+- domain: com.apple.dock
+  key: expose-group-apps
+  type: bool
+  value: false
+
+# Menu Bar
+- domain: com.apple.menuextra.clock
+  key: IsAnalog
+  type: bool
+  value: false
+
+- domain: com.apple.menuextra.clock
+  key: ShowDate
+  type: int
+  value: 1
+
+- domain: com.apple.menuextra.clock
+  key: ShowDayOfWeek
+  type: bool
+  value: true
+
+- domain: com.apple.menuextra.clock
+  key: Show24Hour
+  type: bool
+  value: true
+
+- domain: NSGlobalDomain
+  key: AppleMenuBarVisualEffect
+  type: string
+  value: None
+
+# Widgets
+- domain: com.apple.widgets
+  key: WidgetsEnabled
+  type: bool
+  value: false
+
+# Spotlight
+- domain: com.apple.assistant.support
+  key: "Search Queries Data Sharing Status"
+  type: int
+  value: 2
+
+# Accessibility — disable all shortcuts
+- domain: com.apple.universalaccess
+  key: closeViewScrollWheelToggle
+  type: bool
+  value: false
+
+- domain: com.apple.universalaccess
+  key: closeViewHotkeysEnabled
+  type: bool
+  value: false
+
+# Siri & Apple Intelligence
+- domain: com.apple.assistant.support
+  key: "Assistant Enabled"
+  type: bool
+  value: false
+
+- domain: com.apple.Siri
+  key: StatusMenuVisible
+  type: bool
+  value: false
+
+- domain: com.apple.Siri
+  key: VoiceTriggerEnabled
+  type: bool
+  value: false
+
+# Universal Control / Sidecar — disable linking to other Macs/iPads
+- domain: com.apple.universalcontrol
+  key: Disable
+  type: bool
+  value: true
+
+# AirDrop & Continuity
+- domain: com.apple.AirDrop
+  key: DiscoverableMode
+  type: string
+  value: "Off"
+
+- domain: NSGlobalDomain
+  key: AirPlayEnabled
+  type: bool
+  value: false
+
+- domain: NSGlobalDomain
+  key: NSEnableHandoff
+  type: bool
+  value: false
+
+- domain: com.apple.coreservices.useractivityd
+  key: ActivityAdvertisingAllowed
+  type: bool
+  value: false
+
+- domain: com.apple.coreservices.useractivityd
+  key: ActivityReceivingAllowed
+  type: bool
+  value: false
+
+# Trash
+- domain: com.apple.finder
+  key: FXRemoveOldTrashItems
+  type: bool
+  value: true
+
+# Finder
 - domain: com.apple.finder
   key: AppleShowAllFiles
   type: bool
   value: true
 
-# Example: show path bar in Finder
 - domain: com.apple.finder
   key: ShowPathbar
   type: bool
   value: true
 
-# Example: Dock auto-hide
-# - domain: com.apple.dock
-#   key: autohide
-#   type: bool
-#   value: true
+# Software Updates — don't let Apple auto-install and reboot this server.
+# "Background security improvements" in System Settings → General →
+# Software Update → Automatic Updates maps to these two keys.
+- domain: /Library/Preferences/com.apple.SoftwareUpdate
+  key: CriticalUpdateInstall
+  type: bool
+  value: false
+  sudo: true
+
+- domain: /Library/Preferences/com.apple.SoftwareUpdate
+  key: ConfigDataInstall
+  type: bool
+  value: false
+  sudo: true
+
+# Keyboard / Dictation — turn off the dictation feature entirely.
+- domain: com.apple.HIToolbox
+  key: AppleDictationAutoEnable
+  type: int
+  value: 0
+
+# Trackpad — fast tracking, tap-to-click on.
+# The two Clicking entries cover built-in and Bluetooth trackpads respectively;
+# the global tapBehavior flag is what turns tap-to-click on system-wide.
+- domain: NSGlobalDomain
+  key: com.apple.trackpad.scaling
+  type: float
+  value: 2.5
+
+- domain: com.apple.AppleMultitouchTrackpad
+  key: Clicking
+  type: bool
+  value: true
+
+- domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
+  key: Clicking
+  type: bool
+  value: true
+
+- domain: NSGlobalDomain
+  key: com.apple.mouse.tapBehavior
+  type: int
+  value: 1
+
+# Terminal — enable the long-press accent palette (ç ć č ...) which Terminal's
+# text view opts out of by default. Requires restarting Terminal to take effect.
+- domain: com.apple.Terminal
+  key: ApplePressAndHoldEnabled
+  type: bool
+  value: true

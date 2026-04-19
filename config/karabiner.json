@@ -1,0 +1,65 @@
+{
+  "global": {
+    "show_in_menu_bar": false
+  },
+  "profiles": [
+    {
+      "name": "Default",
+      "selected": true,
+      "complex_modifications": {
+        "rules": [
+          {
+            "description": "F6 (Focus key) → Lock Screen (Ctrl+Cmd+Q)",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "f6"
+                },
+                "to": [
+                  {
+                    "key_code": "q",
+                    "modifiers": ["left_control", "left_command"]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "Terminal: Shift+Return → ESC+Return (newline in Claude Code and other TUI apps)",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "return_or_enter",
+                  "modifiers": {
+                    "mandatory": ["shift"]
+                  }
+                },
+                "to": [
+                  { "key_code": "escape" },
+                  { "key_code": "return_or_enter" }
+                ],
+                "conditions": [
+                  {
+                    "type": "frontmost_application_if",
+                    "bundle_identifiers": [
+                      "^com\\.apple\\.Terminal$",
+                      "^com\\.googlecode\\.iterm2$",
+                      "^com\\.mitchellh\\.ghostty$"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "simple_modifications": [],
+      "fn_function_keys": [],
+      "virtual_hid_keyboard": {
+        "keyboard_type_v2": "ansi"
+      }
+    }
+  ]
+}

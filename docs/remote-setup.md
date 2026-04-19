@@ -131,12 +131,7 @@ A handful of macOS operations require the user's active GUI session and can't be
 
 ### Things the script deliberately leaves to you
 
-After both scripts run, the target still needs manual attention for:
-
-- iCloud / Apple ID sign-in (security-sensitive, not scriptable safely)
-- Browser profile sign-in
-- Granting accessibility / screen recording permissions to any installed casks
-- Anything in System Settings that requires your consent
+After both scripts run, complete the manual checklist in the [README](../README.md#manual-steps-after-setup) — permissions for Karabiner, iCloud sign-in, browser profiles, etc.
 
 ---
 

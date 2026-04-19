@@ -47,8 +47,21 @@ module MacSetup
     end
 
     def configure_ssh_agent
+      unless agent_reachable?
+        logger.info "No ssh-agent available (non-GUI session); skipping keychain add."
+        logger.info "Run after GUI login: ssh-add --apple-use-keychain ~/.ssh/id_ed25519"
+        return
+      end
       logger.info "Adding key to SSH agent..."
       cmd.run("ssh-add --apple-use-keychain ~/.ssh/id_ed25519", abort_on_fail: false)
+    end
+
+    # SSH_AUTH_SOCK is set by launchd for GUI sessions (and forwarded when
+    # ssh'ing with -A). It's unset in non-interactive SSH, where ssh-add
+    # would print "Could not open a connection to your authentication agent".
+    def agent_reachable?
+      sock = ENV["SSH_AUTH_SOCK"].to_s
+      !sock.empty? && File.exist?(sock)
     end
   end
 end

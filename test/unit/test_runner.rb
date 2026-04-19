@@ -25,7 +25,7 @@ class TestRunner < Minitest::Test
   def test_every_module_file_is_registered
     module_files = Dir[File.expand_path("../../lib/mac_setup/*.rb", __dir__)]
       .map { |p| File.basename(p, ".rb") }
-      .reject { |n| %w[base_module runner].include?(n) }
+      .reject { |n| %w[base_module runner harvester].include?(n) }
 
     registered = MacSetup::Runner::MODULES.map do |mod|
       # e.g. MacSetup::GitConfig -> "git_config"

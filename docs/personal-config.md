@@ -26,19 +26,44 @@ The Secrets module runs right after Homebrew (which installs `age`) and before a
 
 ## Initial setup (one-time)
 
-### 1. Install age
+### 1. Harvest from your current Mac
+
+Run on a Mac that's already configured the way you like:
 
 ```bash
-brew install age
+cd ~/mac-setup
+ruby bin/harvest
 ```
 
-### 2. Create your personal config directory
+This collects dotfiles, git identity, SSH config, gh token, Claude Code config, macOS defaults, Brewfile, and keyboard remapping into `config/personal/`. Use `--force` to overwrite existing files.
 
-```bash
-mkdir -p config/personal
+Output:
+```
+config/personal/
+├── dotfiles/          ← .zshrc, .vimrc, .tmux.conf, etc.
+├── git_identity.yml   ← git name/email
+├── ssh_config         ← ~/.ssh/config
+├── known_hosts        ← ~/.ssh/known_hosts
+├── gh_token           ← GitHub CLI token
+├── claude/            ← Claude Code settings
+├── macos_defaults_discovered.yml  ← for review, merge into config/macos_defaults.yml
+├── Brewfile.discovered            ← for review, merge into config/Brewfile
+└── keyboard_remapping.json        ← for review
 ```
 
-### 3. Add your files
+### 2. Review and curate
+
+The harvested files are a raw snapshot. Review before packing:
+
+- **macos_defaults_discovered.yml** — cherry-pick entries into `config/macos_defaults.yml`
+- **Brewfile.discovered** — cherry-pick entries into `config/Brewfile`
+- **dotfiles/** — remove anything machine-specific (hardcoded paths, temp aliases)
+- **gh_token** — verify this is the right token / account
+- **keyboard_remapping.json** — if present, note the hidutil mappings for a future module
+
+### 3. Add your own files
+
+You can also add files manually. Some examples:
 
 **Git identity** (`config/personal/git_identity.yml`):
 ```yaml
@@ -59,7 +84,13 @@ Host *
 
 Add any other dotfiles or config you want to carry between Macs.
 
-### 4. Pack (encrypt)
+### 4. Install age (if not already installed)
+
+```bash
+brew install age
+```
+
+### 5. Pack (encrypt)
 
 ```bash
 cd ~/mac-setup
@@ -68,7 +99,7 @@ tar cz -C config/personal . | age -p > config/personal.age
 
 `age -p` will prompt you to enter and confirm a passphrase. Choose something memorable — this is the **one passphrase** you need to remember.
 
-### 5. Commit the encrypted file
+### 6. Commit the encrypted file
 
 ```bash
 git add config/personal.age
@@ -113,7 +144,13 @@ Priority: `--passphrase` flag > `AGE_PASSPHRASE` env var > interactive prompt.
 
 ## Updating personal config
 
-After changing files in `config/personal/`:
+Re-harvest from your current Mac (overwrites):
+
+```bash
+ruby bin/harvest --force
+```
+
+Or edit files in `config/personal/` manually. Then re-encrypt:
 
 ```bash
 # Re-encrypt
@@ -147,10 +184,17 @@ ruby bin/setup secrets
 
 | File | Format | Read by |
 |---|---|---|
+| `dotfiles/.zshrc`, etc. | Shell config files | Shell module (symlinked to ~) |
 | `git_identity.yml` | YAML: `name`, `email` | GitConfig module |
 | `ssh_config` | Standard SSH config format | Ssh module (copied to `~/.ssh/config`) |
+| `known_hosts` | SSH known hosts | Ssh module (merged into `~/.ssh/known_hosts`) |
+| `gh_token` | Plain text, one line | GithubAuth module (planned) |
+| `claude/settings.json` | JSON | ClaudeCode module (planned) |
+| `macos_defaults_discovered.yml` | YAML | Manual review → merge into `config/macos_defaults.yml` |
+| `Brewfile.discovered` | Brewfile format | Manual review → merge into `config/Brewfile` |
+| `keyboard_remapping.json` | hidutil JSON | Manual review → future Keyboard module |
 
-Add more files as you add modules that need personal config. The Secrets module just decrypts the tarball — individual modules decide what to read from `config/personal/`.
+Files marked "planned" are harvested now but the modules that consume them are not yet implemented. The Secrets module just decrypts the tarball — individual modules decide what to read from `config/personal/`.
 
 ---
 

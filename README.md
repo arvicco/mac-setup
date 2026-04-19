@@ -46,6 +46,17 @@ cd ~/mac-setup
 ruby bin/setup
 ```
 
+### Harvesting config from an existing Mac
+
+On a Mac that's already set up the way you like:
+
+```bash
+ruby bin/harvest          # collects dotfiles, git id, tokens, defaults, etc.
+ruby bin/harvest --force  # overwrite existing config/personal/ files
+```
+
+Review `config/personal/`, then pack and commit — see [docs/personal-config.md](docs/personal-config.md).
+
 ### Options
 
 ```
@@ -72,10 +83,42 @@ ruby bin/setup --all \
 5. **Claude Code** — Verifies Claude Code CLI was installed via Brewfile (`cask "claude-code"`)
 6. **Cask** — Post-install configuration for Homebrew Cask apps
 7. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
-8. **Terminal App** — Binds Shift+Return to newline in Apple Terminal.app's active profile (skipped if Terminal.app is running)
-9. **Git Config** — Sets global git configuration (name, email, default branch, editor). Reads from `config/personal/git_identity.yml` when present.
-10. **Shell** — Installs Oh My Zsh (if missing) and configures zsh
-11. **SSH** — Generates an ed25519 SSH key (if missing), installs `~/.ssh/config` from `config/personal/ssh_config` when present, and adds key to the macOS keychain
+8. **Power Management** — Disables low power mode, prevents auto-sleep on AC when display is off
+9. **Security** — Enables macOS firewall
+10. **Karabiner** — Installs Karabiner-Elements config (`config/karabiner.json`): F6 → Lock Screen, Shift+Return → ESC+Return in terminal emulators (newline for Claude Code and other TUI apps)
+11. **Keyboard Layouts** — Installs any `.bundle` from `config/keyboard_layouts/` to `~/Library/Keyboard Layouts/` (e.g. `DvorakExt.bundle` — Dvorak-QWERTY-⌘ with Opt+letter mappings for č š ž đ è à and ESC+Return on Shift+Return)
+12. **Keyboard Shortcuts** — Writes `config/keyboard_shortcuts.yml` to `com.apple.symbolichotkeys` (disable Spotlight Cmd+Space, rebind Cmd+Space to "Select previous input source", disable Accessibility zoom/contrast/invert shortcuts)
+13. **Git Config** — Sets global git configuration (name, email, default branch, editor). Reads from `config/personal/git_identity.yml` when present.
+14. **Shell** — Installs Oh My Zsh (if missing) and configures zsh
+15. **SSH** — Generates an ed25519 SSH key (if missing), installs `~/.ssh/config` from `config/personal/ssh_config` when present, and adds key to the macOS keychain
+
+## Manual steps after setup
+
+Some macOS security restrictions require manual interaction — these can't be scripted. Complete them once after the setup finishes.
+
+**Permissions (required for installed tools to work):**
+- [ ] **Karabiner-Elements** — open the app, then grant permissions in System Settings → Privacy & Security:
+  - Input Monitoring → enable karabiner_grabber and karabiner_observer
+  - Accessibility → enable karabiner_grabber
+  - Allow the system extension when macOS prompts
+
+**GUI-only steps (SSH mode — run `install-ssh-target.sh`, or do manually):**
+- [ ] **Default browser** — run `defaultbrowser chrome` or set in System Settings → Desktop & Dock
+- [ ] **SSH keychain** — run `ssh-add --apple-use-keychain ~/.ssh/id_ed25519`
+- [ ] **Finder/Dock restart** — log out and back in, or run `killall Finder; killall Dock`
+- [ ] **Activate custom keyboard layout** — System Settings → Keyboard → Input Sources → `+` → English → pick `Dvorak Plus`. This one GUI click writes the entry into `com.apple.inputsources` (TCC-protected — can't be scripted). After this step, mac-setup re-runs will detect the layout there and leave the HIToolbox bookkeeping alone (adding it in both places duplicates the entry in the menu). A logout or reboot may be needed for the layout to first appear after the bundle is installed.
+
+**Not automatable at all:**
+- [ ] **iPhone Widgets** — disable in System Settings → Desktop & Dock → Widgets (no known `defaults write` key)
+- [ ] **Require password after screen lock** — set to "After 1 hour" in System Settings → Lock Screen (the `com.apple.screensaver askForPasswordDelay` key has been SIP-protected since Catalina and only accepts changes through the GUI auth dialog)
+- [ ] **Location Services** — disable in System Settings → Privacy & Security → Location Services (TCC-protected since Catalina; the underlying `/var/db/locationd` plist silently rejects `defaults write`)
+- [ ] **FileVault** — leave **off** (default). Server/always-on use case: enabling FileVault blocks unattended reboot after a power outage because the disk stays locked until someone types the password. Apple Silicon still encrypts the SSD at rest with FileVault off.
+- [ ] **Allow accessories to connect** — set to "Always" in System Settings → Privacy & Security (Apple Silicon hardware-security feature, Secure Enclave-gated; only MDM config profiles can set it non-interactively)
+- [ ] **Keyboard → Adjust keyboard brightness in low light** — turn off in System Settings → Keyboard (controlled by ambient-light sensor → SMC; no user-level `defaults` key exists)
+- [ ] **Keyboard → Keyboard brightness** — set to minimum via the brightness-down key (backlight level is hardware-controlled, not scriptable; with auto-adjust off, the minimum setting will persist)
+- [ ] **iCloud / Apple ID** sign-in
+- [ ] **Browser profile** sign-in
+- [ ] **App-specific permissions** (screen recording, camera, etc.) — granted on first use
 
 ## Customization
 
