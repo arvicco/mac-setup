@@ -9,7 +9,7 @@ module MacSetup
   class Tailscale < BaseModule
     CONFIG_FILE = File.join("config", "personal", "tailscale.yml")
     TAILSCALE   = "/opt/homebrew/bin/tailscale"
-    TAILSCALED  = "/opt/homebrew/sbin/tailscaled"
+    TAILSCALED  = "/opt/homebrew/bin/tailscaled"
     OAUTH_TOKEN_URL = "https://api.tailscale.com/api/v2/oauth/token"
     OAUTH_KEY_URL   = "https://api.tailscale.com/api/v2/tailnet/-/keys"
     # Auth keys only need to live long enough for `tailscale up` to consume
@@ -87,10 +87,9 @@ module MacSetup
         "client_secret" => client_secret,
         "scope"         => "auth_keys",
       )
-      body = http_request(uri, req, "OAuth token exchange")
-      token = JSON.parse(body).fetch("access_token")
-      logger.info "Got access token (expires in #{JSON.parse(body)["expires_in"]}s)."
-      token
+      parsed = JSON.parse(http_request(uri, req, "OAuth token exchange"))
+      logger.info "Got access token (expires in #{parsed["expires_in"]}s)."
+      parsed.fetch("access_token")
     end
 
     def mint_auth_key(access_token, tags)
@@ -132,7 +131,16 @@ module MacSetup
         "--accept-dns",
         *extra_args,
       ]
-      cmd.run(*args, abort_on_fail: true)
+      # `quiet: true` suppresses CommandRunner's argv echo — otherwise the
+      # full auth key lands in the terminal, controller SSH log, and any
+      # CI capture. We print a redacted version instead.
+      redacted = args.map { |a| a.start_with?("--auth-key=") ? "--auth-key=<redacted>" : a }
+      logger.info "$ #{redacted.join(" ")}"
+      _out, err, status = cmd.run(*args, quiet: true, abort_on_fail: false)
+      unless status.success?
+        logger.error "tailscale up failed: #{err.strip}"
+        raise "tailscale up exited #{status.exitstatus}"
+      end
       logger.success "Tailscale connected as '#{hostname}'."
     end
 

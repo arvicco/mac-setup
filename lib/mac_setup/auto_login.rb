@@ -48,8 +48,13 @@ module MacSetup
     private
 
     def already_configured?(username)
+      # sudo for robustness: autoLoginUser on the system loginwindow plist
+      # is world-readable by default on current macOS, but hardened or
+      # MDM-managed machines restrict it. Running under sudo avoids the
+      # false-negative path where the read fails silently and we then
+      # re-invoke sysadminctl every run.
       stdout, _stderr, status = cmd.run(
-        "defaults", "read", LOGINWINDOW_PLIST, "autoLoginUser", quiet: true,
+        "sudo", "defaults", "read", LOGINWINDOW_PLIST, "autoLoginUser", quiet: true,
       )
       status.success? && stdout.strip == username
     end

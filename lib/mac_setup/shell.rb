@@ -54,7 +54,7 @@ module MacSetup
       # Idempotent: same bytes → no-op. Also cleans up a stale symlink
       # left over from older mac-setup versions that used symlinks.
       if File.symlink?(dest)
-        backup = "#{dest}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
+        backup = unique_backup_path(dest)
         FileUtils.mv(dest, backup)
         logger.warn "Replaced stale symlink ~/#{name} (backed up to #{File.basename(backup)})"
       elsif File.exist?(dest)
@@ -62,13 +62,27 @@ module MacSetup
           logger.info "~/#{name} already up to date."
           return
         end
-        backup = "#{dest}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
+        backup = unique_backup_path(dest)
         FileUtils.cp(dest, backup)
         logger.warn "Backed up existing ~/#{name} to #{File.basename(backup)}"
       end
 
       FileUtils.cp(source, dest)
       logger.success "Copied ~/#{name}"
+    end
+
+    # `.bak-YYYYMMDD-HHMMSS` collides on re-runs within the same second.
+    # Append a counter until we find a free slot so we never clobber an
+    # older backup — the whole point of a backup is recoverability.
+    def unique_backup_path(dest)
+      base = "#{dest}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
+      candidate = base
+      i = 1
+      while File.exist?(candidate) || File.symlink?(candidate)
+        candidate = "#{base}.#{i}"
+        i += 1
+      end
+      candidate
     end
   end
 end

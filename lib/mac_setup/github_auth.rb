@@ -19,16 +19,18 @@ module MacSetup
         return
       end
 
-      ensure_gh_auth(token_path)
+      return unless ensure_gh_auth(token_path)
       ensure_ssh_key_uploaded
     end
 
     private
 
+    # Returns true if gh is authenticated after this call, false if not
+    # (so the caller can skip downstream gh-dependent work).
     def ensure_gh_auth(token_path)
       if cmd.success?("gh", "auth", "status")
         logger.info "gh is already authenticated; skipping token login."
-        return
+        return true
       end
       logger.info "Authenticating gh CLI with token from #{TOKEN_FILE}..."
       token = File.read(token_path).strip
@@ -41,10 +43,11 @@ module MacSetup
       )
       if status.success?
         logger.success "gh authenticated."
-      else
-        logger.error "gh auth login failed: #{stderr.strip}"
-        logger.info stdout.strip unless stdout.strip.empty?
+        return true
       end
+      logger.error "gh auth login failed: #{stderr.strip}"
+      logger.info stdout.strip unless stdout.strip.empty?
+      false
     end
 
     def ensure_ssh_key_uploaded
@@ -62,6 +65,9 @@ module MacSetup
       if list_status.success? && !key_body.empty? && list_out.include?(key_body)
         logger.info "GitHub already has this SSH key; skipping upload."
         return
+      end
+      unless list_status.success?
+        logger.warn "gh ssh-key list failed — gh_token may lack the `admin:public_key` scope. Continuing to try upload anyway."
       end
 
       title = "mac-setup: #{Socket.gethostname}"
