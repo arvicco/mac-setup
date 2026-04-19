@@ -86,6 +86,10 @@ module MacSetup
       harvest_ssh(logger)
       harvest_gh_token(logger)
       harvest_claude_config(logger)
+      harvest_rclone(logger)
+      harvest_iterm2(logger)
+      harvest_autologin_template(logger)
+      harvest_tailscale_template(logger)
       harvest_macos_defaults(logger)
       harvest_brewfile(logger)
       harvest_keyboard(logger)
@@ -239,6 +243,113 @@ module MacSetup
       end
 
       logger.info "  (no Claude Code config found)" if found == 0
+      logger.info ""
+    end
+
+    # ---------------------------------------------------------------- Rclone
+
+    def harvest_rclone(logger)
+      logger.info "rclone config:"
+      source = File.expand_path("~/.config/rclone/rclone.conf")
+      if File.exist?(source)
+        if copy_file(source, "rclone.conf", logger)
+          logger.info "  + rclone.conf"
+        end
+      else
+        logger.info "  (no ~/.config/rclone/rclone.conf — run `rclone config` first)"
+      end
+      logger.info ""
+    end
+
+    # ---------------------------------------------------------------- iTerm2
+
+    def harvest_iterm2(logger)
+      logger.info "iTerm2 prefs:"
+      source = File.expand_path("~/Library/Preferences/com.googlecode.iterm2.plist")
+      if File.exist?(source)
+        if copy_file(source, "iterm2.plist", logger)
+          logger.info "  + iterm2.plist"
+        end
+      else
+        logger.info "  (no iTerm2 plist found — launch iTerm2 at least once)"
+      end
+      logger.info ""
+    end
+
+    # ---------------------------------------------------------------- Auto-login
+    #
+    # Login passwords can't be harvested from the live Mac — macOS never
+    # exposes them. Emit a template so the user knows the shape.
+
+    def harvest_autologin_template(logger)
+      logger.info "Auto-login (template):"
+      path = File.join(output_dir, "autologin.yml")
+      if File.exist?(path)
+        logger.info "  autologin.yml already present — leaving as-is"
+        logger.info ""
+        return
+      end
+      user = ENV["USER"] || "admin"
+      template = <<~YAML
+        # Enable auto-login at boot for this user. Useful on a home-server
+        # Mac that must come up unattended after a power outage (pair with
+        # `pmset autorestart 1`, which PowerManagement sets).
+        #
+        # SECURITY NOTES:
+        # - The password below is stored age-encrypted in config/personal.age,
+        #   but sysadminctl also writes it (obfuscated, not encrypted) to
+        #   /etc/kcpassword, which is readable by root.
+        # - FileVault must be OFF for auto-login to actually take effect
+        #   (FileVault requires the password to unlock the disk at boot).
+        # - sysadminctl briefly exposes the password in `ps` argv during setup.
+        # Acceptable for a single-user server; not for a multi-user machine.
+        username: #{user}
+        password: REPLACE_ME
+      YAML
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, template)
+      File.chmod(0o600, path)
+      logger.info "  + autologin.yml (template — fill in login password, or delete the file to skip)"
+      logger.info ""
+    end
+
+    # ---------------------------------------------------------------- Tailscale
+    #
+    # Nothing to harvest from the live system — OAuth client credentials
+    # live only in Tailscale's admin panel. We emit a template so the
+    # user knows the expected shape and can fill in values by hand.
+
+    def harvest_tailscale_template(logger)
+      logger.info "Tailscale (template):"
+      path = File.join(output_dir, "tailscale.yml")
+      # Templates are scaffolded once and filled in by hand; there is no
+      # live source to re-harvest. Never overwrite, even with --force —
+      # that would clobber OAuth creds the user has already pasted in.
+      if File.exist?(path)
+        logger.info "  tailscale.yml already present — leaving as-is"
+        logger.info ""
+        return
+      end
+      template = <<~YAML
+        # OAuth client credentials for joining the tailnet from bin/setup.
+        # Create at https://login.tailscale.com/admin/settings/oauth with
+        # scope: auth_keys (write). Then define a tag in your ACL policy:
+        #   "tagOwners": { "tag:home-server": ["autogroup:admin"] }
+        # The Tailscale module exchanges these creds for a single-use auth
+        # key at setup time; keys never persist on disk.
+        oauth_client_id: REPLACE_ME
+        oauth_client_secret: REPLACE_ME
+        tags:
+          - tag:home-server
+
+        # Optional overrides:
+        # hostname: my-machine           # defaults to scutil --get LocalHostName
+        # extra_up_args:
+        #   - --accept-routes            # use tailnet subnet routers
+      YAML
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, template)
+      logger.info "  + tailscale.yml (template — fill in OAuth creds)"
       logger.info ""
     end
 

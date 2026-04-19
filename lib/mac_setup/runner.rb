@@ -12,6 +12,7 @@ module MacSetup
       ClaudeCode,
       Cask,
       MacosDefaults,
+      AutoLogin,
       PowerManagement,
       Security,
       Karabiner,
@@ -19,7 +20,11 @@ module MacSetup
       KeyboardShortcuts,
       GitConfig,
       Shell,
-      Ssh
+      Iterm2,
+      Ssh,
+      GithubAuth,
+      Rclone,
+      Tailscale
     ].freeze
 
     def initialize(argv = [])

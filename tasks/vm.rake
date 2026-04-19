@@ -144,10 +144,17 @@ class VMTest
   #     which it doesn't in a headless session
   #   - powermanagement: pmset silently drops settings on hardware without a
   #     detectable power source, with no way to read back what was set
+  #   - tailscale: requires real OAuth creds + a live control-plane call;
+  #     VM fixture would litter the user's tailnet with ephemeral nodes
+  #   - githubauth: requires a real gh_token; VM run would try to log in
+  #     as the user and upload an SSH key to their GitHub account
+  #   - autologin: requires the VM user's real login password in yml;
+  #     sysadminctl would change the VM's auto-login state but there's
+  #     nothing useful to assert post-hoc in a throwaway clone
   VM_MODULES = %w[
     hostname homebrew secrets node claudecode
     macosdefaults security karabiner
-    keyboardlayouts keyboardshortcuts gitconfig shell ssh
+    keyboardlayouts keyboardshortcuts gitconfig shell iterm2 ssh
   ].freeze
 
   def run_setup(ip)

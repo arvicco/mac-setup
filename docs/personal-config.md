@@ -184,11 +184,15 @@ ruby bin/setup secrets
 
 | File | Format | Read by |
 |---|---|---|
-| `dotfiles/.zshrc`, etc. | Shell config files | Shell module (planned — symlinking not yet implemented) |
+| `dotfiles/.zshrc`, etc. | Shell config files | Shell module — copied into `~/` (existing targets get `.bak-<timestamp>` backups) |
 | `git_identity.yml` | YAML: `name`, `email` | GitConfig module |
 | `ssh_config` | Standard SSH config format | Ssh module (copied to `~/.ssh/config`) |
 | `known_hosts` | SSH known hosts | Ssh module (planned — merge not yet implemented) |
-| `gh_token` | Plain text, one line | GithubAuth module (planned) |
+| `tailscale.yml` | YAML: `oauth_client_id`, `oauth_client_secret`, `tags`, `extra_up_args` (opt) | Tailscale module — mints single-use auth keys via OAuth to join the tailnet |
+| `autologin.yml` | YAML: `username`, `password` | AutoLogin module — `sysadminctl -autologin set` so the Mac boots straight to desktop after power outage (FileVault must be OFF) |
+| `rclone.conf` | rclone INI-style config (OAuth tokens for cloud remotes) | Rclone module — copied to `~/.config/rclone/rclone.conf` (0600) |
+| `iterm2.plist` | binary plist | iTerm2 module — copied to `~/Library/Preferences/com.googlecode.iterm2.plist` (skipped if iTerm2 running) |
+| `gh_token` | Plain text, one line | GithubAuth module — runs `gh auth login --with-token` + `gh ssh-key add` |
 | `claude/settings.json` | JSON | ClaudeCode module (planned) |
 | `macos_defaults_discovered.yml` | YAML | Manual review → merge into `config/macos_defaults.yml` |
 | `Brewfile.discovered` | Brewfile format | Manual review → merge into `config/Brewfile` |

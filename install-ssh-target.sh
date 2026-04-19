@@ -28,14 +28,15 @@ else
     || warn "defaultbrowser returned non-zero. Chrome may need to be launched once before LaunchServices registers it."
 fi
 
-# 2. SSH key to macOS keychain
-KEY="$HOME/.ssh/id_ed25519"
-if [ -f "$KEY" ]; then
-  info "Adding SSH key to macOS keychain..."
-  ssh-add --apple-use-keychain "$KEY"
-else
-  warn "No SSH key at $KEY — skipping keychain step."
-fi
+# 2. SSH keys to macOS keychain (general-purpose + dedicated GitHub)
+for KEY in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_ed25519_github"; do
+  if [ -f "$KEY" ]; then
+    info "Adding $KEY to macOS keychain..."
+    ssh-add --apple-use-keychain "$KEY"
+  else
+    warn "No SSH key at $KEY — skipping."
+  fi
+done
 
 # 3. Restart Finder and Dock so they pick up defaults applied earlier
 info "Restarting Finder and Dock..."

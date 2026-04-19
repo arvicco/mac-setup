@@ -83,14 +83,19 @@ ruby bin/setup --all \
 5. **Claude Code** — Verifies Claude Code CLI was installed via Brewfile (`cask "claude-code"`)
 6. **Cask** — Post-install configuration for Homebrew Cask apps
 7. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
-8. **Power Management** — Disables low power mode, prevents auto-sleep on AC when display is off
-9. **Security** — Enables macOS firewall
-10. **Karabiner** — Installs Karabiner-Elements config (`config/karabiner.json`): F6 → Lock Screen, Shift+Return → ESC+Return in terminal emulators (newline for Claude Code and other TUI apps)
-11. **Keyboard Layouts** — Installs any `.bundle` from `config/keyboard_layouts/` to `~/Library/Keyboard Layouts/` (e.g. `DvorakExt.bundle` — Dvorak-QWERTY-⌘ with Opt+letter mappings for č š ž đ è à and ESC+Return on Shift+Return)
-12. **Keyboard Shortcuts** — Writes `config/keyboard_shortcuts.yml` to `com.apple.symbolichotkeys` (disable Spotlight Cmd+Space, rebind Cmd+Space to "Select previous input source", disable Accessibility zoom/contrast/invert shortcuts)
-13. **Git Config** — Sets global git configuration (name, email, default branch, editor). Reads from `config/personal/git_identity.yml` when present.
-14. **Shell** — Installs Oh My Zsh (if missing) and configures zsh
-15. **SSH** — Generates an ed25519 SSH key (if missing), installs `~/.ssh/config` from `config/personal/ssh_config` when present, and adds key to the macOS keychain
+8. **Auto Login** — Enables boot-time auto-login for the user listed in `config/personal/autologin.yml` (home-server pattern: machine comes up unattended after a power outage). Skipped if no config file present.
+9. **Power Management** — Disables low power mode, prevents auto-sleep on AC/battery, enables auto-restart after power failure, and wake-on-LAN (magic packet)
+10. **Security** — Enables macOS firewall
+11. **Karabiner** — Installs Karabiner-Elements config (`config/karabiner.json`): F6 → Lock Screen, Shift+Return → ESC+Return in terminal emulators (newline for Claude Code and other TUI apps)
+12. **Keyboard Layouts** — Installs any `.bundle` from `config/keyboard_layouts/` to `~/Library/Keyboard Layouts/` (e.g. `DvorakExt.bundle` — Dvorak-QWERTY-⌘ with Opt+letter mappings for č š ž đ è à and ESC+Return on Shift+Return)
+13. **Keyboard Shortcuts** — Writes `config/keyboard_shortcuts.yml` to `com.apple.symbolichotkeys` (disable Spotlight Cmd+Space, rebind Cmd+Space to "Select previous input source", disable Accessibility zoom/contrast/invert shortcuts)
+14. **Git Config** — Sets global git configuration (name, email, default branch, editor). Reads from `config/personal/git_identity.yml` when present.
+15. **Shell** — Installs Oh My Zsh (if missing) and **copies** every file in `config/personal/dotfiles/` into `~/` (existing targets → backed up to `.bak-<timestamp>`). Copies (not symlinks) so the dotfiles survive removing the mac-setup checkout after bootstrap.
+16. **iTerm2** — Copies `config/personal/iterm2.plist` to `~/Library/Preferences/com.googlecode.iterm2.plist`. Skipped if iTerm2 is running (it caches prefs in memory and would overwrite on quit).
+17. **SSH** — Generates two ed25519 keys: `~/.ssh/id_ed25519` (general-purpose) and `~/.ssh/id_ed25519_github` (dedicated). Installs `~/.ssh/config` from `config/personal/ssh_config` when present — use `Host github.com / IdentityFile ~/.ssh/id_ed25519_github / IdentitiesOnly yes` to pin the GitHub-only key. Both keys are added to the macOS keychain when a GUI SSH agent is reachable.
+18. **GitHub Auth** — Reads `config/personal/gh_token`, runs `gh auth login --with-token` (skip if already authed), then uploads `~/.ssh/id_ed25519_github.pub` via `gh ssh-key add` titled `mac-setup: <hostname>` (skip if GitHub already has that key body).
+19. **Rclone** — Copies `config/personal/rclone.conf` to `~/.config/rclone/rclone.conf` with `0600` permissions (the file holds OAuth tokens for cloud remotes).
+20. **Tailscale** — Joins this Mac to your tailnet. Reads `config/personal/tailscale.yml` (OAuth client creds + tags), installs `tailscaled` as a system daemon (headless, survives reboots), mints a short-lived single-use auth key via the Tailscale API, runs `tailscale up --ssh --accept-dns`.
 
 ## Manual steps after setup
 
@@ -102,9 +107,17 @@ Some macOS security restrictions require manual interaction — these can't be s
   - Accessibility → enable karabiner_grabber
   - Allow the system extension when macOS prompts
 
+**One-time Tailscale admin setup (before first Tailscale run):**
+- [ ] Create an OAuth client at https://login.tailscale.com/admin/settings/oauth with scope `auth_keys` (write). Save the client ID + secret into `config/personal/tailscale.yml`.
+- [ ] Define a tag in your ACL policy with yourself as a `tagOwner`, e.g.:
+  ```json
+  "tagOwners": { "tag:home-server": ["autogroup:admin"] }
+  ```
+  Reference it from `tailscale.yml` (`tags: [tag:home-server]`). OAuth-minted keys must be tagged.
+
 **GUI-only steps (SSH mode — run `install-ssh-target.sh`, or do manually):**
 - [ ] **Default browser** — run `defaultbrowser chrome` or set in System Settings → Desktop & Dock
-- [ ] **SSH keychain** — run `ssh-add --apple-use-keychain ~/.ssh/id_ed25519`
+- [ ] **SSH keychain** — run `ssh-add --apple-use-keychain ~/.ssh/id_ed25519 && ssh-add --apple-use-keychain ~/.ssh/id_ed25519_github`
 - [ ] **Finder/Dock restart** — log out and back in, or run `killall Finder; killall Dock`
 - [ ] **Activate custom keyboard layout** — System Settings → Keyboard → Input Sources → `+` → English → pick `Dvorak Plus`. This one GUI click writes the entry into `com.apple.inputsources` (TCC-protected — can't be scripted). After this step, mac-setup re-runs will detect the layout there and leave the HIToolbox bookkeeping alone (adding it in both places duplicates the entry in the menu). A logout or reboot may be needed for the layout to first appear after the bundle is installed.
 
