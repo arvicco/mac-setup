@@ -89,7 +89,10 @@ module MacSetup
     # so bindings take effect without a logout.
     def reload_prefs
       logger.info "Reloading preferences..."
-      cmd.run("killall", "cfprefsd", abort_on_fail: false)
+      # quiet: cfprefsd is not running yet on a fresh SSH session for this
+      # user; the resulting "No matching processes" error is expected and
+      # should not look like a failure in the log.
+      cmd.run("killall", "cfprefsd", abort_on_fail: false, quiet: true)
       cmd.run(ACTIVATE_SETTINGS, "-u", abort_on_fail: false)
     end
   end

@@ -59,3 +59,94 @@
 - id: 26
   enabled: false
   note: Accessibility — Decrease contrast (Cmd+Opt+Ctrl+,)
+
+# Mission Control — rebind "Move left/right a space" from Ctrl+Arrow → Cmd+Arrow.
+# ASCII 65535 is the "no printable" sentinel macOS uses for arrow/F-keys.
+# Keycodes 123/124 are left/right arrow. The `fn` modifier is part of the
+# mask because macOS auto-sets fn on internal-keyboard arrow-key events;
+# matching the live-plist pattern keeps these working on Apple hardware
+# without surprising external-keyboard behavior.
+
+- id: 79
+  enabled: true
+  ascii: 65535
+  keycode: 123
+  modifiers: [cmd, fn]
+  note: Mission Control — Move left a space (Cmd+Left)
+
+- id: 81
+  enabled: true
+  ascii: 65535
+  keycode: 124
+  modifiers: [cmd, fn]
+  note: Mission Control — Move right a space (Cmd+Right)
+
+# Mission Control — rebind "Switch to Desktop N" from Ctrl+N → Cmd+N
+# for N = 1..9. IDs 118..126 in AppleSymbolicHotKeys.
+# US-layout keycodes for 1-9: 18 19 20 21 23 22 26 28 25 (non-contiguous
+# between 5/6 and 7/8 because the row was allocated before Apple Silicon
+# finalized the USB HID map). Standard Dvorak keeps digits in the same
+# positions, so this works on Dvorak Plus too.
+
+- id: 118
+  enabled: true
+  ascii: 49     # '1'
+  keycode: 18
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 1 (Cmd+1)
+
+- id: 119
+  enabled: true
+  ascii: 50     # '2'
+  keycode: 19
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 2 (Cmd+2)
+
+- id: 120
+  enabled: true
+  ascii: 51     # '3'
+  keycode: 20
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 3 (Cmd+3)
+
+- id: 121
+  enabled: true
+  ascii: 52     # '4'
+  keycode: 21
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 4 (Cmd+4)
+
+- id: 122
+  enabled: true
+  ascii: 53     # '5'
+  keycode: 23
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 5 (Cmd+5)
+
+- id: 123
+  enabled: true
+  ascii: 54     # '6'
+  keycode: 22
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 6 (Cmd+6)
+
+- id: 124
+  enabled: true
+  ascii: 55     # '7'
+  keycode: 26
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 7 (Cmd+7)
+
+- id: 125
+  enabled: true
+  ascii: 56     # '8'
+  keycode: 28
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 8 (Cmd+8)
+
+- id: 126
+  enabled: true
+  ascii: 57     # '9'
+  keycode: 25
+  modifiers: [cmd]
+  note: Mission Control — Switch to Desktop 9 (Cmd+9)
