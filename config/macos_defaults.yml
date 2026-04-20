@@ -1,7 +1,12 @@
 # macOS defaults to apply via `defaults write`
-# Each entry: domain, key, type (string/bool/int/float), value, [sudo]
+# Each entry: domain, key, type (string/bool/int/float), value,
+#             [sudo], [current_host]
 # Set `sudo: true` for system-level domains under /Library/Preferences/.
-# User-level domains (NSGlobalDomain, com.apple.*) don't need it.
+# Set `current_host: true` for per-host preferences (Control Center
+#   module visibility, battery percentage, etc. — anything macOS writes
+#   into ~/Library/Preferences/ByHost/).
+# User-level domains (NSGlobalDomain, com.apple.*) in the main plist
+# don't need either flag.
 
 # Appearance
 - domain: NSGlobalDomain
@@ -126,6 +131,43 @@
   key: AppleMenuBarVisualEffect
   type: string
   value: None
+
+# Menu Bar — Control Center module visibility.
+# Per-host integer schema: 8 = "Show in Control Center only",
+#                          18 = "Always Show in Menu Bar".
+# The host-independent `NSStatusItem VisibleCC <Module>` bool is *not*
+# sufficient on its own — ControlCenter reads visibility from the
+# per-host integer. Tested live on Apple Silicon / macOS Tahoe.
+- domain: com.apple.controlcenter
+  key: Sound
+  type: int
+  value: 18
+  current_host: true
+
+- domain: com.apple.controlcenter
+  key: Bluetooth
+  type: int
+  value: 18
+  current_host: true
+
+- domain: com.apple.controlcenter
+  key: Battery
+  type: int
+  value: 18
+  current_host: true
+
+- domain: com.apple.controlcenter
+  key: BatteryShowPercentage
+  type: bool
+  value: true
+  current_host: true
+
+# Hide FocusModes from menu bar (8 = Control Center only).
+- domain: com.apple.controlcenter
+  key: FocusModes
+  type: int
+  value: 8
+  current_host: true
 
 # Widgets
 - domain: com.apple.widgets

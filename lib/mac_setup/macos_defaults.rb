@@ -16,20 +16,17 @@ module MacSetup
       return if defaults.nil? || defaults.empty?
 
       defaults.each do |entry|
-        domain = entry["domain"]
-        key = entry["key"]
-        type = entry["type"]
-        value = entry["value"]
-        use_sudo = entry["sudo"] == true
-
-        if [domain, key, type, value].any? { |v| v.nil? || v.to_s.empty? }
+        if [entry["domain"], entry["key"], entry["type"], entry["value"]].any? { |v| v.nil? || v.to_s.empty? }
           logger.warn "Skipping malformed defaults entry: #{entry.inspect}"
           next
         end
 
-        logger.info "Setting #{domain} #{key} = #{value}#{' (sudo)' if use_sudo}"
-        argv = use_sudo ? ["sudo", "defaults"] : ["defaults"]
-        cmd.run(*argv, "write", domain, key, "-#{type}", value.to_s)
+        flags = []
+        flags << "sudo"         if entry["sudo"]
+        flags << "currentHost"  if entry["current_host"]
+        suffix = flags.empty? ? "" : " (#{flags.join(", ")})"
+        logger.info "Setting #{entry["domain"]} #{entry["key"]} = #{entry["value"]}#{suffix}"
+        cmd.run(*defaults_argv(entry))
       end
 
       set_volume
@@ -38,7 +35,10 @@ module MacSetup
 
     def restart_services
       logger.info "Restarting affected services..."
-      %w[Finder Dock].each do |proc_name|
+      # ControlCenter caches menu-bar item visibility in memory; without a
+      # restart our com.apple.controlcenter writes don't show up in the
+      # menu bar until the next login.
+      %w[Finder Dock ControlCenter].each do |proc_name|
         # Filter by current UID so we match killall's "only my processes"
         # default — a plain `pgrep` sees system-owned duplicates too.
         if cmd.success?("pgrep", "-q", "-U", Process.uid.to_s, proc_name)
@@ -47,6 +47,19 @@ module MacSetup
           logger.info "#{proc_name} not running; skipping restart."
         end
       end
+    end
+
+    # Build the argv for `defaults write` based on an entry's flags:
+    # - sudo:         prepend `sudo` (needed for /Library/Preferences/*)
+    # - current_host: inject `-currentHost` after `defaults`, the form
+    #                 macOS uses for per-host preferences like Control
+    #                 Center module visibility
+    # Flag ordering matters: sudo comes first (it's the outer command),
+    # then `defaults`, then `-currentHost` (a flag on `defaults` itself).
+    def defaults_argv(entry)
+      argv = entry["sudo"] ? ["sudo", "defaults"] : ["defaults"]
+      argv << "-currentHost" if entry["current_host"]
+      argv + ["write", entry["domain"], entry["key"], "-#{entry["type"]}", entry["value"].to_s]
     end
 
     private
