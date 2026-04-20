@@ -295,6 +295,11 @@ module MacSetup
         # Mac that must come up unattended after a power outage (pair with
         # `pmset autorestart 1`, which PowerManagement sets).
         #
+        # This file ships inside config/personal.age — present on every
+        # Mac that shares the archive. To actually apply it, pass the
+        # --autologin flag to bin/setup on the Mac where you want boot-
+        # time auto-login; the module is a no-op without the flag.
+        #
         # SECURITY NOTES:
         # - The password below is stored age-encrypted in config/personal.age,
         #   but sysadminctl also writes it (obfuscated, not encrypted) to

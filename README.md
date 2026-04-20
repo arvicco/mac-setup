@@ -71,7 +71,8 @@ ruby bin/setup --all \
   --hostname my-mac \
   --git-name "Jane Doe" \
   --git-email jane@example.com \
-  --passphrase "your-age-passphrase"
+  --passphrase "your-age-passphrase" \
+  --autologin                          # opt in to boot-time auto-login
 ```
 
 ## Setup Steps (in execution order)
@@ -83,7 +84,7 @@ ruby bin/setup --all \
 5. **Claude Code** — Verifies Claude Code CLI was installed via Brewfile (`cask "claude-code"`). Also deploys `config/personal/claude/settings.json` and `settings.local.json` into `~/.claude/` when present (existing targets backed up to `.bak-<timestamp>`).
 6. **Cask** — Post-install configuration for Homebrew Cask apps
 7. **macOS Defaults** — Applies system preferences from `config/macos_defaults.yml` (Finder, Dock, etc.)
-8. **Auto Login** — Enables boot-time auto-login for the user listed in `config/personal/autologin.yml` (home-server pattern: machine comes up unattended after a power outage). Skipped if no config file present. **Requires FileVault to be off** (FileVault forces a password at the boot prompt, which auto-login can't satisfy). The password is briefly visible in `ps` argv while `sysadminctl` runs — acceptable for a single-user machine, not for multi-user boxes.
+8. **Auto Login** — Opt-in per install. When `--autologin` is passed, reads `config/personal/autologin.yml` and enables boot-time auto-login (home-server pattern: machine comes up unattended after a power outage). Without the flag the module is a no-op even when the yml is present, because `autologin.yml` lives in the shared `config/personal.age` archive but only some installs (servers) should actually have auto-login. **Requires FileVault to be off** (FileVault forces a password at the boot prompt, which auto-login can't satisfy). The password is briefly visible in `ps` argv while `sysadminctl` runs — acceptable for a single-user machine, not for multi-user boxes.
 9. **Power Management** — Disables low power mode, prevents auto-sleep on AC/battery, enables auto-restart after power failure, and wake-on-LAN (magic packet)
 10. **Security** — Enables macOS firewall
 11. **Karabiner** — Installs Karabiner-Elements config (`config/karabiner.json`): F6 → Lock Screen, Shift+Return → ESC+Return in terminal emulators (newline for Claude Code and other TUI apps)

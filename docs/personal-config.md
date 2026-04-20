@@ -189,7 +189,7 @@ ruby bin/setup secrets
 | `ssh_config` | Standard SSH config format | Ssh module (copied to `~/.ssh/config`) |
 | `known_hosts` | SSH known hosts | Ssh module — union-merged into `~/.ssh/known_hosts` (no duplicates, existing entries preserved) |
 | `tailscale.yml` | YAML: `oauth_client_id`, `oauth_client_secret`, `tags`, `extra_up_args` (opt) | Tailscale module — mints single-use auth keys via OAuth to join the tailnet |
-| `autologin.yml` | YAML: `username`, `password` | AutoLogin module — `sysadminctl -autologin set` so the Mac boots straight to desktop after power outage (FileVault must be OFF) |
+| `autologin.yml` | YAML: `username`, `password` | AutoLogin module — only applied when `bin/setup --autologin` is passed (per-install opt-in, since the yml ships in the shared archive but only home-server installs want boot-time auto-login). Uses `sysadminctl -autologin set`. FileVault must be OFF. |
 | `rclone.conf` | rclone INI-style config (OAuth tokens for cloud remotes) | Rclone module — copied to `~/.config/rclone/rclone.conf` (0600) |
 | `iterm2.plist` | binary plist | iTerm2 module — copied to `~/Library/Preferences/com.googlecode.iterm2.plist` (skipped if iTerm2 running) |
 | `gh_token` | Plain text, one line | GithubAuth module — runs `gh auth login --with-token` + `gh ssh-key add` |

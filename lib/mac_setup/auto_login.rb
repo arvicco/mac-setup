@@ -8,9 +8,18 @@ module MacSetup
     LOGINWINDOW_PLIST = "/Library/Preferences/com.apple.loginwindow"
 
     def run
+      # Opt-in per install. autologin.yml travels inside config/personal.age
+      # and is therefore present on every Mac that shares the archive, but
+      # only some installs want boot-time auto-login (laptops: no; home
+      # server: yes). Require the user to pass --autologin explicitly.
+      unless options[:autologin]
+        logger.info "Auto-login not enabled (pass --autologin to enable). Skipping."
+        return
+      end
+
       path = File.join(MacSetup::ROOT, CONFIG_FILE)
       unless File.exist?(path)
-        logger.info "No #{CONFIG_FILE}; skipping auto-login."
+        logger.warn "--autologin passed but #{CONFIG_FILE} is missing. Skipping."
         return
       end
 
