@@ -108,7 +108,7 @@ module MacSetup
           @options[:passphrase] = v
         end
 
-        opts.on("--autologin", "Enable boot-time auto-login (requires config/personal/autologin.yml)") do
+        opts.on("--autologin", "Enable boot-time auto-login (reads config/personal/autologin.yml if present)") do
           @options[:autologin] = true
         end
 
