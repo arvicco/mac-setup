@@ -112,6 +112,10 @@ module MacSetup
           @options[:autologin] = true
         end
 
+        opts.on("--github-ssh", "Generate a dedicated SSH key for github.com and upload to GitHub (default: HTTPS via gh credential helper)") do
+          @options[:github_ssh] = true
+        end
+
         opts.on("-h", "--help", "Show this help") do
           @options[:help] = true
         end

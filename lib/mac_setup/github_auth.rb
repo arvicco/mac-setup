@@ -20,7 +20,11 @@ module MacSetup
       end
 
       return unless ensure_gh_auth(token_path)
-      ensure_ssh_key_uploaded
+      if options[:github_ssh]
+        ensure_ssh_key_uploaded
+      else
+        logger.info "Using HTTPS for github.com (default). Skipping SSH key upload. Pass --github-ssh to enable."
+      end
     end
 
     private

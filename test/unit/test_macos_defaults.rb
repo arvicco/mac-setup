@@ -81,4 +81,62 @@ class TestMacosDefaults < Minitest::Test
     }
     assert_equal "42", @mod.defaults_argv(entry).last
   end
+
+  # filter_personal enforces the core-wins rule for the macos_defaults
+  # overlay: personal entries with the same (domain, key, current_host)
+  # identity as a core entry are dropped before apply, so the core
+  # default is the one that wins.
+
+  def core_entry(extra = {})
+    { "domain" => "com.apple.dock", "key" => "autohide", "type" => "bool", "value" => true }.merge(extra)
+  end
+
+  def test_filter_personal_passes_through_non_colliding_entries
+    core = [core_entry]
+    personal = [
+      { "domain" => "com.apple.dock", "key" => "tilesize", "type" => "int", "value" => 48 },
+    ]
+    assert_equal personal, @mod.filter_personal(core, personal)
+  end
+
+  def test_filter_personal_drops_exact_collision
+    core = [core_entry]
+    personal = [
+      { "domain" => "com.apple.dock", "key" => "autohide", "type" => "bool", "value" => false },
+    ]
+    assert_empty @mod.filter_personal(core, personal)
+  end
+
+  def test_filter_personal_distinguishes_current_host_scoping
+    # A core entry at the plain scope does NOT collide with a personal
+    # entry at -currentHost scope — they write to different plists.
+    core = [{ "domain" => "com.apple.controlcenter", "key" => "Sound", "type" => "bool", "value" => true }]
+    personal = [
+      { "domain" => "com.apple.controlcenter", "key" => "Sound", "type" => "int", "value" => 18, "current_host" => true },
+    ]
+    assert_equal personal, @mod.filter_personal(core, personal)
+  end
+
+  def test_filter_personal_matches_on_current_host_when_both_set
+    core = [
+      { "domain" => "com.apple.controlcenter", "key" => "Sound", "type" => "int", "value" => 18, "current_host" => true },
+    ]
+    personal = [
+      { "domain" => "com.apple.controlcenter", "key" => "Sound", "type" => "int", "value" => 8,  "current_host" => true },
+    ]
+    assert_empty @mod.filter_personal(core, personal)
+  end
+
+  def test_filter_personal_keeps_order_of_surviving_entries
+    core = [core_entry]
+    personal = [
+      core_entry("value" => false), # collides, dropped
+      { "domain" => "com.apple.dock", "key" => "orientation", "type" => "string", "value" => "bottom" },
+      { "domain" => "com.apple.finder", "key" => "ShowPathbar", "type" => "bool", "value" => false },
+    ]
+    survivors = @mod.filter_personal(core, personal)
+    assert_equal 2, survivors.length
+    assert_equal "orientation", survivors.first["key"]
+    assert_equal "ShowPathbar", survivors.last["key"]
+  end
 end

@@ -72,7 +72,8 @@ ruby bin/setup --all \
   --git-name "Jane Doe" \
   --git-email jane@example.com \
   --passphrase "your-age-passphrase" \
-  --autologin                          # opt in to boot-time auto-login
+  --autologin \                        # opt in to boot-time auto-login
+  --github-ssh                         # opt in to dedicated GitHub SSH key
 ```
 
 ## Setup Steps (in execution order)
@@ -93,8 +94,8 @@ ruby bin/setup --all \
 14. **Git Config** — Sets global git configuration (name, email, default branch, editor). Reads from `config/personal/git_identity.yml` when present.
 15. **Shell** — Installs Oh My Zsh (if missing) and **copies** every file in `config/personal/dotfiles/` into `~/` (existing targets → backed up to `.bak-<timestamp>`). Copies (not symlinks) so the dotfiles survive removing the mac-setup checkout after bootstrap.
 16. **iTerm2** — Copies `config/personal/iterm2.plist` to `~/Library/Preferences/com.googlecode.iterm2.plist`. Skipped if iTerm2 is running (it caches prefs in memory and would overwrite on quit).
-17. **SSH** — Generates two ed25519 keys: `~/.ssh/id_ed25519` (general-purpose) and `~/.ssh/id_ed25519_github` (dedicated). Installs `~/.ssh/config` from `config/personal/ssh_config` when present — use `Host github.com / IdentityFile ~/.ssh/id_ed25519_github / IdentitiesOnly yes` to pin the GitHub-only key. Union-merges `config/personal/known_hosts` into `~/.ssh/known_hosts` (dedup, preserves existing). Both keys are added to the macOS keychain when a GUI SSH agent is reachable.
-18. **GitHub Auth** — Reads `config/personal/gh_token`, runs `gh auth login --with-token` (skip if already authed), then uploads `~/.ssh/id_ed25519_github.pub` via `gh ssh-key add` titled `mac-setup: <hostname>` (skip if GitHub already has that key body).
+17. **SSH** — Generates `~/.ssh/id_ed25519` (general-purpose). Installs `~/.ssh/config` from `config/personal/ssh_config` when present. Union-merges `config/personal/known_hosts` into `~/.ssh/known_hosts` (dedup, preserves existing). The key is added to the macOS keychain when a GUI SSH agent is reachable. *Opt-in:* `--github-ssh` also generates `~/.ssh/id_ed25519_github` (dedicated GitHub key). Default is HTTPS for github.com via `gh`'s credential helper — no dedicated SSH key to manage or leak.
+18. **GitHub Auth** — Reads `config/personal/gh_token`, runs `gh auth login --with-token` (skip if already authed). `gh`'s credential helper then handles HTTPS pushes to `https://github.com/...` automatically. *Opt-in:* `--github-ssh` additionally uploads `~/.ssh/id_ed25519_github.pub` via `gh ssh-key add` titled `mac-setup: <hostname>` for SSH-protocol remotes.
 19. **Rclone** — Copies `config/personal/rclone.conf` to `~/.config/rclone/rclone.conf` with `0600` permissions (the file holds OAuth tokens for cloud remotes).
 20. **Tailscale** — Joins this Mac to your tailnet. Reads `config/personal/tailscale.yml` (OAuth client creds + tags), installs `tailscaled` as a system daemon (headless, survives reboots), mints a short-lived single-use auth key via the Tailscale API, runs `tailscale up --ssh --accept-dns`.
 
@@ -136,10 +137,13 @@ Some macOS security restrictions require manual interaction — these can't be s
 
 ## Customization
 
-- **Packages:** Edit `config/Brewfile`
-- **macOS preferences:** Edit `config/macos_defaults.yml`
-- **Personal config (git identity, SSH config, etc.):** See [docs/personal-config.md](docs/personal-config.md)
-- **Git:** Edit values in `lib/mac_setup/git_config.rb` or `config/personal/git_identity.yml`
+Two layers:
+
+- **Core (tracked in git):** `config/Brewfile`, `config/macos_defaults.yml`, `config/karabiner.json`, `config/keyboard_shortcuts.yml`, `config/keyboard_layouts.yml`. These ship on every install. Edit here for changes everyone gets.
+- **Personal overlay (inside `config/personal.age`):** `config/personal/Brewfile` and `config/personal/macos_defaults.yml` are applied *after* the core files for your per-user extras. Harvested from your source Mac; prune before packing. **For `macos_defaults.yml` the core always wins on conflicts** — personal entries whose `(domain, key, current_host)` matches a core entry are dropped, preserving the deliberate defaults mac-setup ships. For `Brewfile` there's no conflict concept (`brew bundle` is idempotent per package), so personal just installs on top.
+
+Other personal files (`git_identity.yml`, `ssh_config`, `dotfiles/*`, `tailscale.yml`, etc.) are read by specific modules — see [docs/personal-config.md](docs/personal-config.md).
+
 - **New modules:** Create a class inheriting `MacSetup::BaseModule` in `lib/mac_setup/`
 
 ## Further docs

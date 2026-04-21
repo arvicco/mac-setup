@@ -13,6 +13,8 @@ module MacSetup
       .zshrc
       .zprofile
       .zshenv
+      .zlogin
+      .zlogout
       .bashrc
       .bash_profile
       .vimrc
@@ -22,6 +24,29 @@ module MacSetup
       .curlrc
       .wgetrc
       .editorconfig
+    ].freeze
+
+    # Directories under $HOME to harvest whole. Paths may be nested
+    # (e.g. ".config/nvim") — Shell walks the harvested tree file-by-
+    # file on deploy, merging into the target rather than replacing
+    # whole directories, so sibling subtrees not in this list stay
+    # intact.
+    # Deliberately excluded — managed by their own modules or contain
+    # per-machine auth state:
+    #   .config/rclone      — Rclone module
+    #   .config/karabiner   — Karabiner module
+    #   .config/gh          — auth tokens, per-machine
+    DOTDIRS = %w[
+      .zsh
+      .config/git
+      .config/nvim
+      .config/fish
+      .config/starship
+      .config/alacritty
+      .config/wezterm
+      .config/kitty
+      .config/tmux
+      .config/zsh
     ].freeze
 
     # macOS defaults we care about. Each: [domain, key, type].
@@ -82,6 +107,7 @@ module MacSetup
       FileUtils.mkdir_p(output_dir)
 
       harvest_dotfiles(logger)
+      harvest_dotdirs(logger)
       harvest_git_identity(logger)
       harvest_ssh(logger)
       harvest_gh_token(logger)
@@ -156,6 +182,39 @@ module MacSetup
         end
       end
       logger.info "  (#{found} dotfiles collected)" if found > 0
+      logger.info "  (none found)" if found == 0
+      logger.info ""
+    end
+
+    # ---------------------------------------------------------------- Dotdirs
+
+    def harvest_dotdirs(logger)
+      logger.info "Dotdirs:"
+      found = 0
+      DOTDIRS.each do |name|
+        src = File.expand_path("~/#{name}")
+        next unless File.directory?(src)
+
+        # Skip if it looks like a git repo — that's cloned tooling, not
+        # config, and checking in the full .git tree would bloat the
+        # encrypted archive substantially.
+        if File.exist?(File.join(src, ".git"))
+          logger.info "  (skipping ~/#{name}: looks like a git repo)"
+          next
+        end
+
+        dest = File.join(output_dir, "dotfiles", name)
+        if File.exist?(dest) && !@options[:force]
+          logger.warn "  dotfiles/#{name}/ already exists (use --force to overwrite)"
+          next
+        end
+        FileUtils.rm_rf(dest) if File.exist?(dest)
+        FileUtils.mkdir_p(File.dirname(dest))
+        FileUtils.cp_r(src, dest)
+        logger.info "  + ~/#{name}/"
+        found += 1
+      end
+      logger.info "  (#{found} directories collected)" if found > 0
       logger.info "  (none found)" if found == 0
       logger.info ""
     end
@@ -376,10 +435,15 @@ module MacSetup
       if entries.empty?
         logger.info "  (no interesting defaults found)"
       else
-        if write_file("macos_defaults_discovered.yml", YAML.dump(entries), logger)
+        # config/personal/macos_defaults.yml serves as the live overlay
+        # that MacosDefaults applies on top of the core-tracked yml.
+        # Review + prune the file before packing personal.age — anything
+        # left here is applied on every install that decrypts the archive.
+        # Entries colliding with core are dropped at apply time (core wins).
+        if write_file("macos_defaults.yml", YAML.dump(entries), logger)
           logger.info "  + #{entries.length} defaults discovered"
-          logger.info "  Review config/personal/macos_defaults_discovered.yml,"
-          logger.info "  then merge desired entries into config/macos_defaults.yml"
+          logger.info "  Review config/personal/macos_defaults.yml (OVERLAY — applied after core);"
+          logger.info "  prune entries you don't want carried across every install before packing."
         end
       end
       logger.info ""
@@ -405,14 +469,18 @@ module MacSetup
       logger.info "Brewfile:"
       stdout, _, status = Open3.capture3("brew", "bundle", "dump", "--file=-")
       if status.success? && !stdout.strip.empty?
-        if write_file("Brewfile.discovered", stdout, logger)
+        # config/personal/Brewfile is the live overlay — Homebrew runs
+        # `brew bundle` on it after the core Brewfile. Review + prune
+        # before packing personal.age; unreviewed cruft gets installed
+        # on every new Mac that decrypts this archive.
+        if write_file("Brewfile", stdout, logger)
           lines = stdout.lines
           brews = lines.count { |l| l.start_with?("brew ") }
           casks = lines.count { |l| l.start_with?("cask ") }
           mas = lines.count { |l| l.start_with?("mas ") }
           logger.info "  + #{brews} formulae, #{casks} casks, #{mas} mas apps"
-          logger.info "  Review config/personal/Brewfile.discovered,"
-          logger.info "  then merge desired entries into config/Brewfile"
+          logger.info "  Review config/personal/Brewfile (OVERLAY — applied after core);"
+          logger.info "  prune packages you don't want carried across every install before packing."
         end
       else
         logger.info "  (brew not installed or no packages found)"

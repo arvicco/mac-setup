@@ -20,6 +20,30 @@ class TestSsh < Minitest::Test
     assert_equal "Ssh", MacSetup::Ssh.module_name
   end
 
+  def test_keys_to_generate_default_is_general_key_only
+    mod = MacSetup::Ssh.new(
+      logger: MacSetup::Utils::Logger.new,
+      cmd: MacSetup::Utils::CommandRunner.new(logger: MacSetup::Utils::Logger.new),
+    )
+    keys = mod.keys_to_generate
+    assert_equal 1, keys.length
+    assert_equal "id_ed25519", keys.first[:file]
+  end
+
+  def test_keys_to_generate_with_github_ssh_flag_includes_github_key
+    mod = MacSetup::Ssh.new(
+      logger: MacSetup::Utils::Logger.new,
+      cmd: MacSetup::Utils::CommandRunner.new(logger: MacSetup::Utils::Logger.new),
+      options: { github_ssh: true },
+    )
+    files = mod.keys_to_generate.map { |k| k[:file] }
+    assert_equal %w[id_ed25519 id_ed25519_github], files
+    # github key carries a descriptive comment to help identify it on
+    # GitHub's Settings → SSH Keys list
+    github = mod.keys_to_generate.find { |k| k[:file] == "id_ed25519_github" }
+    assert_equal "github", github[:comment]
+  end
+
   def test_read_host_lines_drops_blanks
     path = File.join(@dir, "kh")
     File.write(path, "host1 ssh-ed25519 AAA\n\n\nhost2 ssh-ed25519 BBB\n")

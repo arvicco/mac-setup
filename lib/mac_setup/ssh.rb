@@ -8,20 +8,26 @@ module MacSetup
     SSH_CONFIG_SOURCE = File.join("config", "personal", "ssh_config")
     KNOWN_HOSTS_SOURCE = File.join("config", "personal", "known_hosts")
 
-    # Keys we generate on a fresh Mac. The general-purpose key is for
-    # servers/other boxes; the github key is dedicated so that
-    # `Host github.com / IdentitiesOnly yes` in ssh_config can pin it.
-    # This avoids ever sending unrelated keys to GitHub.
-    KEYS = [
-      { file: "id_ed25519",        comment: nil },
-      { file: "id_ed25519_github", comment: "github" },
-    ].freeze
+    # General-purpose key used for servers and other boxes.
+    GENERAL_KEY = { file: "id_ed25519", comment: nil }.freeze
+
+    # Dedicated GitHub key, opt-in via --github-ssh. Only generate +
+    # upload when the user actually intends to use SSH for github.com
+    # remotes. HTTPS-over-gh-credential-helper is the default these
+    # days; provisioning an unused key would leave material on disk
+    # and (after GithubAuth) on GitHub, for no authenticated-access
+    # benefit — that's an unnecessary attack surface.
+    GITHUB_KEY  = { file: "id_ed25519_github", comment: "github" }.freeze
 
     def run
-      KEYS.each { |spec| ensure_key(spec) }
+      keys_to_generate.each { |spec| ensure_key(spec) }
       install_ssh_config
       merge_known_hosts
       configure_ssh_agent
+    end
+
+    def keys_to_generate
+      options[:github_ssh] ? [GENERAL_KEY, GITHUB_KEY] : [GENERAL_KEY]
     end
 
     private
@@ -94,10 +100,10 @@ module MacSetup
     def configure_ssh_agent
       unless agent_reachable?
         logger.info "No ssh-agent available (non-GUI session); skipping keychain add."
-        KEYS.each { |spec| logger.info "Run after GUI login: ssh-add --apple-use-keychain ~/.ssh/#{spec[:file]}" }
+        keys_to_generate.each { |spec| logger.info "Run after GUI login: ssh-add --apple-use-keychain ~/.ssh/#{spec[:file]}" }
         return
       end
-      KEYS.each do |spec|
+      keys_to_generate.each do |spec|
         path = File.join(SSH_DIR, spec[:file])
         next unless File.exist?(path)
         logger.info "Adding ~/.ssh/#{spec[:file]} to SSH agent..."

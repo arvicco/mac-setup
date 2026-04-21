@@ -42,14 +42,31 @@ module MacSetup
       end
     end
 
+    # Apply core Brewfile first, then the optional personal overlay
+    # (config/personal/Brewfile — gitignored, travels inside personal.age).
+    # `brew bundle` is idempotent per package so running twice across both
+    # files is safe; the overlay just adds your per-user extras on top of
+    # the mandatory core packages.
     def install_packages
-      brewfile = File.join(MacSetup::ROOT, "config", "Brewfile")
-      if File.exist?(brewfile)
-        logger.info "Installing packages from Brewfile..."
-        cmd.run(BREW_PATH, "bundle", "--file=#{brewfile}", abort_on_fail: false)
+      core     = File.join(MacSetup::ROOT, "config", "Brewfile")
+      personal = File.join(MacSetup::ROOT, "config", "personal", "Brewfile")
+
+      applied = 0
+      if File.exist?(core)
+        logger.info "Installing packages from Brewfile (core)..."
+        cmd.run(BREW_PATH, "bundle", "--file=#{core}", abort_on_fail: false)
+        applied += 1
       else
-        logger.warn "No Brewfile found at #{brewfile}"
+        logger.warn "No Brewfile found at #{core}"
       end
+
+      if File.exist?(personal)
+        logger.info "Installing packages from config/personal/Brewfile (overlay)..."
+        cmd.run(BREW_PATH, "bundle", "--file=#{personal}", abort_on_fail: false)
+        applied += 1
+      end
+
+      logger.warn "No Brewfile applied." if applied.zero?
     end
   end
 end

@@ -12,25 +12,35 @@ module MacSetup
       copy_dotfiles
     end
 
-    # Copy (not symlink) so that removing the mac-setup checkout after
-    # initial provisioning doesn't break every dotfile. Backups preserve
-    # anything pre-existing instead of clobbering it.
+    # Walk the harvested tree file-by-file and mirror each into $HOME.
+    # Merge semantics: siblings in the user's home that aren't in the
+    # harvest are left alone (important for ~/.config/, which holds
+    # per-app subtrees that other mac-setup modules also write to).
+    # Backups are per-file so only the actually-replaced file is saved;
+    # we don't rename entire directories out from under the user.
     def copy_dotfiles
-      source_dir = File.join(MacSetup::ROOT, DOTFILES_SOURCE)
-      unless File.directory?(source_dir)
+      source_root = File.join(MacSetup::ROOT, DOTFILES_SOURCE)
+      unless File.directory?(source_root)
         logger.info "No #{DOTFILES_SOURCE}/ directory; skipping dotfile copy."
         return
       end
 
-      entries = Dir.children(source_dir).sort.select do |name|
-        File.file?(File.join(source_dir, name))
-      end
+      entries = Dir.glob("**/*", File::FNM_DOTMATCH, base: source_root)
+                   .reject { |rel| [".", ".."].include?(File.basename(rel)) }
       if entries.empty?
         logger.info "No dotfiles in #{DOTFILES_SOURCE}/."
         return
       end
 
-      entries.each { |name| copy_dotfile(source_dir, name) }
+      entries.sort.each do |rel|
+        source = File.join(source_root, rel)
+        dest   = File.expand_path(File.join("~", rel))
+        if File.directory?(source)
+          FileUtils.mkdir_p(dest)
+        else
+          copy_dotfile(source, dest, rel)
+        end
+      end
     end
 
     private
@@ -47,28 +57,26 @@ module MacSetup
       )
     end
 
-    def copy_dotfile(source_dir, name)
-      source = File.join(source_dir, name)
-      dest   = File.expand_path("~/#{name}")
-
-      # Idempotent: same bytes → no-op. Also cleans up a stale symlink
-      # left over from older mac-setup versions that used symlinks.
+    def copy_dotfile(source, dest, rel)
+      # Stale symlink from older mac-setup versions that symlinked
+      # dotfiles instead of copying. Preserve via backup.
       if File.symlink?(dest)
         backup = unique_backup_path(dest)
         FileUtils.mv(dest, backup)
-        logger.warn "Replaced stale symlink ~/#{name} (backed up to #{File.basename(backup)})"
+        logger.warn "Replaced stale symlink ~/#{rel} (backed up to #{File.basename(backup)})"
       elsif File.exist?(dest)
         if File.read(dest, mode: "rb") == File.read(source, mode: "rb")
-          logger.info "~/#{name} already up to date."
+          logger.info "~/#{rel} already up to date."
           return
         end
         backup = unique_backup_path(dest)
         FileUtils.cp(dest, backup)
-        logger.warn "Backed up existing ~/#{name} to #{File.basename(backup)}"
+        logger.warn "Backed up existing ~/#{rel} to #{File.basename(backup)}"
       end
 
+      FileUtils.mkdir_p(File.dirname(dest))
       FileUtils.cp(source, dest)
-      logger.success "Copied ~/#{name}"
+      logger.success "Copied ~/#{rel}"
     end
 
     # `.bak-YYYYMMDD-HHMMSS` collides on re-runs within the same second.
