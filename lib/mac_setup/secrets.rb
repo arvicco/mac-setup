@@ -26,7 +26,7 @@ module MacSetup
         return
       end
 
-      backup_existing_personal
+      @backup_path = backup_existing_personal
       decrypt
     end
 
@@ -55,10 +55,11 @@ module MacSetup
     # atomic-actions rule — stage before destroying). The backup keeps
     # the stale stamp too; we only need the *current* decrypt to succeed.
     def backup_existing_personal
-      return unless File.directory?(decrypted_path) && !Dir.empty?(decrypted_path)
+      return nil unless File.directory?(decrypted_path) && !Dir.empty?(decrypted_path)
       backup = "#{decrypted_path}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
       FileUtils.mv(decrypted_path, backup)
       logger.warn "Stale #{File.basename(decrypted_path)}/ moved to #{File.basename(backup)} before re-decrypt."
+      backup
     end
 
     def age_installed?
@@ -83,6 +84,7 @@ module MacSetup
         unless success
           logger.error "Decryption failed. Wrong passphrase?"
           logger.error stderr unless stderr.empty?
+          note_backup_on_failure
           return
         end
 
@@ -93,6 +95,7 @@ module MacSetup
           FileUtils.rm_rf(decrypted_path)
           logger.error "Failed to extract decrypted archive."
           logger.error stderr unless stderr.empty?
+          note_backup_on_failure
           return
         end
 
@@ -108,6 +111,16 @@ module MacSetup
     # just the hash of the ciphertext.
     def write_stamp
       File.write(File.join(decrypted_path, STAMP_FILE), age_source_hash)
+    end
+
+    # If decrypt/extract fails AFTER we've already moved the stale
+    # personal/ aside, the target dir is gone and the user has no
+    # cue where their previous state lives. Point at the backup so
+    # recovery is a one-liner (`mv config/personal.bak-<ts> config/personal`).
+    def note_backup_on_failure
+      return unless @backup_path
+      logger.error "Your previous config/personal/ is preserved at #{File.basename(@backup_path)}."
+      logger.error "To restore: mv config/#{File.basename(@backup_path)} config/personal"
     end
 
     # age reads the passphrase from /dev/tty, which fails when we were

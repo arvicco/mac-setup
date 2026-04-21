@@ -165,7 +165,56 @@ class TestSecrets < Minitest::Test
     end
   end
 
+  def test_backup_existing_personal_returns_path_on_success
+    with_tmp_paths do |_, dec|
+      FileUtils.mkdir_p(dec)
+      File.write(File.join(dec, "x"), "payload")
+      path = @mod.send(:backup_existing_personal)
+      refute_nil path
+      assert File.directory?(path)
+      assert path.include?(".bak-"), "expected a .bak- suffix, got #{path}"
+    end
+  end
+
+  def test_backup_existing_personal_returns_nil_when_no_backup_made
+    with_tmp_paths do |_, dec|
+      assert_nil @mod.send(:backup_existing_personal)
+      FileUtils.mkdir_p(dec)
+      assert_nil @mod.send(:backup_existing_personal), "empty dir should not trigger backup"
+    end
+  end
+
+  def test_note_backup_on_failure_silent_when_no_backup
+    # No @backup_path instance var set → nothing to point at → no log line
+    @mod.instance_variable_set(:@backup_path, nil)
+    out, err = capture_io_streams { @mod.send(:note_backup_on_failure) }
+    assert_equal "", out
+    assert_equal "", err
+  end
+
+  def test_note_backup_on_failure_tells_user_where_backup_is
+    @mod.instance_variable_set(:@backup_path, "/Users/x/mac-setup/config/personal.bak-20260101-120000")
+    _out, err = capture_io_streams { @mod.send(:note_backup_on_failure) }
+    assert_match(/personal\.bak-20260101-120000/, err)
+    assert_match(/To restore/, err)
+  end
+
   private
+
+  # Capture stdout+stderr around a block so we can assert on logger output
+  # without the noise flooding the test runner's real stdout/stderr.
+  def capture_io_streams
+    out = StringIO.new
+    err = StringIO.new
+    orig_out, orig_err = $stdout, $stderr
+    $stdout = out
+    $stderr = err
+    yield
+    [out.string, err.string]
+  ensure
+    $stdout = orig_out
+    $stderr = orig_err
+  end
 
   def with_env(vars)
     saved = vars.keys.each_with_object({}) { |k, h| h[k] = ENV[k] }
