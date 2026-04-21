@@ -1,17 +1,33 @@
-# Apps pinned to the Dock. Each entry is the absolute path to a .app
-# bundle. The Dock module adds any that aren't already pinned (via
-# `dockutil --list`) and restarts the Dock once at the end.
+# Dock pins. Two lists:
 #
-# Order: entries are added top-to-bottom → appear left-to-right in the
-# Dock (or top-to-bottom if Dock orientation is right/left). Existing
-# pinned apps keep their positions; new additions land at the end.
+# - `apps:` absolute paths to .app bundles to add. Matched against
+#   the `file://` URL in `dockutil --list` output (path match, not
+#   label match — avoids substring ambiguity like "iTerm" vs "iTerm2").
+#   CLI-only casks (e.g. `claude-code`) have no .app bundle and are
+#   deliberately absent.
+# - `remove:` labels of entries to remove from the Dock. Matched by
+#   exact label via `dockutil --remove <label>`. Used for stock
+#   macOS items a fresh install pins that the user doesn't want.
 #
-# CLI-only casks (e.g. `claude-code` which installs /opt/homebrew/bin/claude
-# with no .app bundle) are deliberately absent — there's nothing for the
-# Dock to pin.
+# Ordering of `apps:`: entries are added top-to-bottom → appear
+# left-to-right in the Dock (or top-to-bottom if Dock orientation
+# is right/left). Existing pinned apps keep their positions; new
+# additions land at the end.
 
 apps:
   - /Applications/Google Chrome.app
   - /Applications/iTerm.app
   - /Applications/Cursor.app
   - /Applications/Keet.app
+
+remove:
+  - Messages
+  - Mail
+  - Maps
+  - FaceTime
+  - Phone
+  - Contacts
+  - Reminders
+  - TV
+  - Games
+  - App Store
