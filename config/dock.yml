@@ -1,0 +1,17 @@
+# Apps pinned to the Dock. Each entry is the absolute path to a .app
+# bundle. The Dock module adds any that aren't already pinned (via
+# `dockutil --list`) and restarts the Dock once at the end.
+#
+# Order: entries are added top-to-bottom → appear left-to-right in the
+# Dock (or top-to-bottom if Dock orientation is right/left). Existing
+# pinned apps keep their positions; new additions land at the end.
+#
+# CLI-only casks (e.g. `claude-code` which installs /opt/homebrew/bin/claude
+# with no .app bundle) are deliberately absent — there's nothing for the
+# Dock to pin.
+
+apps:
+  - /Applications/Google Chrome.app
+  - /Applications/iTerm.app
+  - /Applications/Cursor.app
+  - /Applications/Keet.app

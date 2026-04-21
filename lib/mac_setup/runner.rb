@@ -13,6 +13,7 @@ module MacSetup
       ClaudeCode,
       Cask,
       MacosDefaults,
+      Dock,
       AutoLogin,
       PowerManagement,
       Security,
