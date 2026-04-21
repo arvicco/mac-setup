@@ -204,6 +204,10 @@ ruby bin/setup secrets
 
 **Overlay files** (`Brewfile`, `macos_defaults.yml`) are applied live on every install that decrypts the archive — but *always after* the core files in `config/`. For `macos_defaults.yml`, personal entries that collide with a core entry on `(domain, key, current_host)` are dropped ("core wins"). Prune these files after harvest so only your intended extras are carried across machines.
 
+**Migration from earlier versions**: if your current `personal.age` still contains `Brewfile.discovered` or `macos_defaults_discovered.yml` (the old review-only names), they're inert — no module reads them. Running `ruby bin/harvest --force` writes the new names (`Brewfile`, `macos_defaults.yml`) alongside; you can then delete the `.discovered` files from `config/personal/` and repack. No rush — stale `.discovered` entries don't break anything.
+
+**Dotfile merge semantics**: `Shell` walks the harvested tree and mirrors each file into `$HOME`, merging per-file rather than replacing whole directories. A file removed from `config/personal/dotfiles/` on a subsequent harvest stays on any machine where it was previously deployed — the deploy side only ADDs and UPDATEs, never DELETEs. If you need a stale file gone, remove it by hand on the target (same category as removing a package once it's in Brewfile; mac-setup doesn't uninstall on absence either).
+
 **Manual-review files** (`keyboard_remapping.json`) are harvested as hints but not auto-applied — their shape is specific enough that human review before merging into tracked config is safer than a blind copy. The Secrets module just decrypts the tarball; individual modules decide what to read from `config/personal/`.
 
 ---

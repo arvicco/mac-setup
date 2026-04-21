@@ -47,6 +47,12 @@ module MacSetup
     # `brew bundle` is idempotent per package so running twice across both
     # files is safe; the overlay just adds your per-user extras on top of
     # the mandatory core packages.
+    #
+    # No conflict-filter here (unlike MacosDefaults.filter_personal): a
+    # Brewfile entry is a package install request, not a setting — two
+    # entries for the same package aren't a conflict, brew bundle just
+    # resolves to the installed state. MacosDefaults filters because
+    # `defaults write` IS a setting that core should own.
     def install_packages
       core     = File.join(MacSetup::ROOT, "config", "Brewfile")
       personal = File.join(MacSetup::ROOT, "config", "personal", "Brewfile")

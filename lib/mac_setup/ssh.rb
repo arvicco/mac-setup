@@ -26,8 +26,22 @@ module MacSetup
       configure_ssh_agent
     end
 
+    # Return the set of keys we manage (generate if missing, add to
+    # agent when the agent is reachable).
+    # - GENERAL_KEY always.
+    # - GITHUB_KEY when --github-ssh is passed, OR when the key file
+    #   already exists on disk (user had it provisioned by an earlier
+    #   run, may be mid-transition, or copied in manually — in any case
+    #   we should keep managing it; silently ignoring it would disagree
+    #   with install-ssh-target.sh which adds it to the keychain based
+    #   on file presence alone).
     def keys_to_generate
-      options[:github_ssh] ? [GENERAL_KEY, GITHUB_KEY] : [GENERAL_KEY]
+      include_github = options[:github_ssh] || github_key_on_disk?
+      include_github ? [GENERAL_KEY, GITHUB_KEY] : [GENERAL_KEY]
+    end
+
+    def github_key_on_disk?
+      File.exist?(File.join(SSH_DIR, GITHUB_KEY[:file]))
     end
 
     private
