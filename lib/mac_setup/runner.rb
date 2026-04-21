@@ -62,12 +62,21 @@ module MacSetup
         logger.info ""
         logger.info "Running: #{mod.name}"
         logger.info "-" * 40
+        errors_before = logger.error_count
         mod.run
-        logger.success "#{mod.name} complete."
+        if logger.error_count > errors_before
+          logger.error "#{mod.name} completed with errors — see above."
+        else
+          logger.success "#{mod.name} complete."
+        end
       end
 
       logger.info ""
-      logger.success "All done! Open a new terminal for all tools to be available."
+      if logger.error_count.zero?
+        logger.success "All done! Open a new terminal for all tools to be available."
+      else
+        logger.error "Finished with #{logger.error_count} error(s). Open a new terminal for all tools to be available."
+      end
     ensure
       log_file&.close
     end

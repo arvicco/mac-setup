@@ -14,7 +14,8 @@ module MacSetup
         return
       end
       unless File.executable?(DOCKUTIL)
-        logger.warn "#{DOCKUTIL} not found — ensure Brewfile installed dockutil."
+        logger.error "#{DOCKUTIL} not found — ensure Brewfile installed dockutil."
+        logger.error "Fix: `brew install dockutil` or re-run `ruby bin/setup homebrew`, then re-run this module."
         return
       end
 
@@ -87,16 +88,18 @@ module MacSetup
     # dockutil --list output (tab-separated):
     #   <label>\tfile:///Applications/Foo.app/\tpersistentApps\t<idx>\t…
     # We extract and normalize the file URL to a filesystem path.
+    # `filter_map` is Ruby 2.7+; this project targets stock macOS
+    # Ruby 2.6, so use `map { ... next nil ... }.compact` instead.
     def parse_pinned_paths(output)
-      output.each_line.filter_map do |line|
+      require "uri"
+      output.each_line.map do |line|
         parts = line.split("\t")
-        next if parts.length < 2
+        next nil if parts.length < 2
         url = parts[1].strip
-        next unless url.start_with?("file://")
-        require "uri"
+        next nil unless url.start_with?("file://")
         path = URI.decode_www_form_component(url.sub(%r{\Afile://}, "").sub(%r{/\z}, ""))
         normalize_path(path)
-      end
+      end.compact
     end
 
     # macOS is case-insensitive on the default APFS (case-preserving).

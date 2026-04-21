@@ -24,7 +24,8 @@ module MacSetup
       end
 
       unless File.executable?(TAILSCALE)
-        logger.warn "#{TAILSCALE} not found — ensure Brewfile installed tailscale."
+        logger.error "#{TAILSCALE} not found — ensure Brewfile installed tailscale."
+        logger.error "Fix: `brew install tailscale` or re-run `ruby bin/setup homebrew`, then re-run this module."
         return
       end
 

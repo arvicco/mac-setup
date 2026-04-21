@@ -15,8 +15,11 @@ module MacSetup
       # also appended to it without ANSI codes so the file reads cleanly.
       # Streamed command output (cmd.run(..., stream: true)) bypasses
       # this path — for those, terminal scrollback is the source of truth.
+      attr_reader :error_count
+
       def initialize(log_file: nil)
         @log_file = log_file
+        @error_count = 0
       end
 
       def info(msg)
@@ -32,6 +35,7 @@ module MacSetup
       end
 
       def error(msg)
+        @error_count += 1
         emit("ERR ", COLORS[:red], msg, $stderr)
       end
 

@@ -22,7 +22,7 @@ module MacSetup
       end
 
       unless age_installed?
-        logger.warn "age not found — install it (brew install age) and re-run."
+        logger.error "age not found — install it (brew install age) and re-run."
         return
       end
 

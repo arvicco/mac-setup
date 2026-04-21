@@ -15,7 +15,8 @@ module MacSetup
       end
 
       unless cmd.success?("which", "gh")
-        logger.warn "gh CLI not found — ensure Brewfile installed it."
+        logger.error "gh CLI not found — ensure Brewfile installed it."
+        logger.error "Fix: `brew install gh` or re-run `ruby bin/setup homebrew`, then re-run this module."
         return
       end
 
