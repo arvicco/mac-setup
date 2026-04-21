@@ -21,12 +21,14 @@ module MacSetup
     def install_nvm
       logger.info "Installing nvm #{NVM_VERSION}..."
       url = "https://raw.githubusercontent.com/nvm-sh/nvm/v#{NVM_VERSION}/install.sh"
-      cmd.run("curl -o- #{url} | bash", abort_on_fail: true)
+      cmd.run("curl -o- #{url} | bash", abort_on_fail: true, stream: true)
     end
 
     def install_node_lts
       logger.info "Installing Node.js LTS..."
-      cmd.run(nvm_prefix + "nvm install --lts", abort_on_fail: true)
+      # stream: nvm install --lts downloads and compiles for several
+      # minutes; live output beats a silent wait.
+      cmd.run(nvm_prefix + "nvm install --lts", abort_on_fail: true, stream: true)
     end
 
     def add_node_to_path

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "digest"
 require "fileutils"
 require "io/console"
 require "open3"
@@ -7,14 +8,16 @@ require "tempfile"
 
 module MacSetup
   class Secrets < BaseModule
+    STAMP_FILE = ".age-source-sha256"
+
     def run
       unless File.exist?(encrypted_path)
         logger.info "No config/personal.age found. Skipping secrets decryption."
         return
       end
 
-      if File.directory?(decrypted_path) && !Dir.empty?(decrypted_path)
-        logger.info "config/personal/ already populated. Skipping decryption."
+      if up_to_date?
+        logger.info "config/personal/ already decrypted from current config/personal.age; skipping."
         return
       end
 
@@ -23,10 +26,40 @@ module MacSetup
         return
       end
 
+      backup_existing_personal
       decrypt
     end
 
     private
+
+    # True when config/personal/ was decrypted from the exact archive
+    # that sits at config/personal.age right now. Checked via a SHA256
+    # stamp we drop into the decrypted dir — keeps re-runs fast and
+    # auto-re-decrypts when the user pulls a fresher personal.age.
+    def up_to_date?
+      return false unless File.directory?(decrypted_path)
+      return false if Dir.empty?(decrypted_path)
+
+      stamp_path = File.join(decrypted_path, STAMP_FILE)
+      return false unless File.exist?(stamp_path)
+
+      File.read(stamp_path).strip == age_source_hash
+    end
+
+    def age_source_hash
+      Digest::SHA256.file(encrypted_path).hexdigest
+    end
+
+    # Before re-decrypt: move the stale personal/ tree aside so nothing
+    # the user may have edited gets silently clobbered (CLAUDE.md's
+    # atomic-actions rule — stage before destroying). The backup keeps
+    # the stale stamp too; we only need the *current* decrypt to succeed.
+    def backup_existing_personal
+      return unless File.directory?(decrypted_path) && !Dir.empty?(decrypted_path)
+      backup = "#{decrypted_path}.bak-#{Time.now.strftime("%Y%m%d-%H%M%S")}"
+      FileUtils.mv(decrypted_path, backup)
+      logger.warn "Stale #{File.basename(decrypted_path)}/ moved to #{File.basename(backup)} before re-decrypt."
+    end
 
     def age_installed?
       cmd.success?("command -v age")
@@ -63,10 +96,18 @@ module MacSetup
           return
         end
 
+        write_stamp
         logger.success "Personal config decrypted to config/personal/."
       ensure
         File.unlink(tmp.path) if File.exist?(tmp.path)
       end
+    end
+
+    # Drop a SHA256 of the source archive inside the decrypted dir so
+    # up_to_date? can short-circuit on future runs. Not a secret —
+    # just the hash of the ciphertext.
+    def write_stamp
+      File.write(File.join(decrypted_path, STAMP_FILE), age_source_hash)
     end
 
     # age reads the passphrase from /dev/tty, which fails when we were

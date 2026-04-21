@@ -34,11 +34,21 @@ module MacSetup
       end
 
       config = YAML.safe_load(File.read(config_path)) || {}
-      client_id     = config.fetch("oauth_client_id")
-      client_secret = config.fetch("oauth_client_secret")
+      client_id     = config["oauth_client_id"]
+      client_secret = config["oauth_client_secret"]
       tags          = config["tags"] || []
       extra_args    = config["extra_up_args"] || []
       hostname      = config["hostname"] || current_hostname
+
+      missing = missing_or_placeholder(
+        "oauth_client_id" => client_id,
+        "oauth_client_secret" => client_secret,
+      )
+      unless missing.empty?
+        logger.warn "#{CONFIG_FILE} has unfilled fields: #{missing.join(", ")}. Skipping Tailscale setup."
+        logger.info "See README Tailscale section for how to create an OAuth client and fill these in."
+        return
+      end
 
       if tags.empty?
         logger.error "tailscale.yml must list at least one tag under `tags:` — OAuth-minted keys require tags."
@@ -53,6 +63,16 @@ module MacSetup
       # Make sure the fresh key doesn't linger in memory longer than
       # necessary. tailscale up consumes single-use keys; best-effort.
       auth_key.clear if defined?(auth_key) && auth_key.is_a?(String)
+    end
+
+    # Return the keys whose value is missing, blank, or still the
+    # REPLACE_ME sentinel from the harvester template. Used to bail
+    # cleanly when the user has the template but hasn't pasted in
+    # real OAuth creds yet — better than crashing deep inside HTTP.
+    def missing_or_placeholder(fields)
+      fields.each_with_object([]) do |(name, value), missing|
+        missing << name if value.nil? || value.to_s.strip.empty? || value.to_s.strip == "REPLACE_ME"
+      end
     end
 
     private

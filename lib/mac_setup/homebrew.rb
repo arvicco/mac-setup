@@ -21,9 +21,11 @@ module MacSetup
       logger.info "Installing Homebrew..."
       # NONINTERACTIVE=1 skips the "Press RETURN to continue" prompt so this
       # works in headless VM runs (see tasks/vm.rake).
+      # stream: true so the installer's live output (several minutes) is
+      # visible instead of buffered until the end.
       cmd.run(
         %(NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL #{BREW_INSTALL_URL})"),
-        abort_on_fail: true
+        abort_on_fail: true, stream: true
       )
     end
 
@@ -60,7 +62,9 @@ module MacSetup
       applied = 0
       if File.exist?(core)
         logger.info "Installing packages from Brewfile (core)..."
-        cmd.run(BREW_PATH, "bundle", "--file=#{core}", abort_on_fail: false)
+        # stream: true — brew bundle takes 10-20 min on a fresh Mac and
+        # any sudo prompts / per-cask failures need to surface live.
+        cmd.run(BREW_PATH, "bundle", "--file=#{core}", abort_on_fail: false, stream: true)
         applied += 1
       else
         logger.warn "No Brewfile found at #{core}"
@@ -68,7 +72,7 @@ module MacSetup
 
       if File.exist?(personal)
         logger.info "Installing packages from config/personal/Brewfile (overlay)..."
-        cmd.run(BREW_PATH, "bundle", "--file=#{personal}", abort_on_fail: false)
+        cmd.run(BREW_PATH, "bundle", "--file=#{personal}", abort_on_fail: false, stream: true)
         applied += 1
       end
 

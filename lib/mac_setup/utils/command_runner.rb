@@ -21,12 +21,27 @@ module MacSetup
       # Use the exec form whenever args come from user input, YAML, or anywhere
       # untrusted — it makes shell injection impossible.
       #
-      # Options (trailing hash): abort_on_fail:, quiet:
-      def run(*args, abort_on_fail: false, quiet: false)
+      # Options (trailing hash):
+      #   abort_on_fail:  exit the process on non-zero (default false)
+      #   quiet:          suppress "$ cmd" echo and error log (default false)
+      #   stream:         inherit parent's stdout/stderr so output is live;
+      #                   returns ["", "", status] since nothing is captured.
+      #                   Use for long-running commands (brew bundle, nvm
+      #                   install, oh-my-zsh install) where waiting silently
+      #                   is worse than losing the post-hoc recap on failure.
+      def run(*args, abort_on_fail: false, quiet: false, stream: false)
         raise ArgumentError, "run requires at least one argument" if args.empty?
 
         logger.info "$ #{display(args)}" unless quiet
-        stdout, stderr, status = Open3.capture3(*args)
+
+        if stream
+          system(*args)
+          status = $? # Process::Status of the child; always set after system()
+          stdout = ""
+          stderr = ""
+        else
+          stdout, stderr, status = Open3.capture3(*args)
+        end
 
         unless status.success?
           if abort_on_fail

@@ -181,16 +181,12 @@
   type: int
   value: 2
 
-# Accessibility — disable all shortcuts
-- domain: com.apple.universalaccess
-  key: closeViewScrollWheelToggle
-  type: bool
-  value: false
-
-- domain: com.apple.universalaccess
-  key: closeViewHotkeysEnabled
-  type: bool
-  value: false
+# (Accessibility: com.apple.universalaccess is TCC-protected on macOS
+# Tahoe — `defaults write` is rejected even from the user's own shell.
+# The Accessibility zoom/contrast keyboard shortcuts we want disabled
+# are already handled in config/keyboard_shortcuts.yml via symbolichotkey
+# IDs 15, 17, 19, 21, 23, 25, 26. The universalaccess scroll/hotkeys
+# toggles themselves remain GUI-only — see "Manual steps" in README.)
 
 # Siri & Apple Intelligence
 - domain: com.apple.assistant.support

@@ -44,4 +44,29 @@ class TestCommandRunner < Minitest::Test
   def test_run_with_no_args_raises
     assert_raises(ArgumentError) { @runner.run(quiet: true) }
   end
+
+  # stream: inherits stdout/stderr to the parent; captured output is empty
+  # strings but the exit status is correct. Lets callers show live progress
+  # for long-running commands (brew bundle, nvm install, etc.) instead of
+  # buffering until completion.
+
+  def test_stream_mode_returns_empty_captures
+    stdout, stderr, status = @runner.run("true", stream: true, quiet: true)
+    assert status.success?
+    assert_equal "", stdout
+    assert_equal "", stderr
+  end
+
+  def test_stream_mode_propagates_non_zero_status
+    _stdout, _stderr, status = @runner.run("false", stream: true, quiet: true)
+    refute status.success?
+    assert_equal 1, status.exitstatus
+  end
+
+  def test_stream_mode_accepts_exec_form_args
+    # Key property: stream mode must work with exec-form invocation too,
+    # since that's how we call brew bundle, ssh-keygen, pmset, etc.
+    _stdout, _stderr, status = @runner.run("true", "anything", stream: true, quiet: true)
+    assert status.success?
+  end
 end

@@ -64,6 +64,107 @@ class TestSecrets < Minitest::Test
     end
   end
 
+  # Hash-stamp tests: Secrets writes a SHA256 stamp of config/personal.age
+  # inside config/personal/ on successful decrypt. up_to_date? uses that
+  # stamp to skip re-decrypt on re-runs, and trips automatically when the
+  # user pulls a fresher archive (different hash → mismatch → re-decrypt).
+
+  def with_tmp_paths
+    Dir.mktmpdir("mac-setup-secrets-") do |root|
+      enc = File.join(root, "personal.age")
+      dec = File.join(root, "personal")
+      # The real age file; contents just need to exist and hash stably.
+      File.write(enc, "ciphertext v1")
+      @mod.instance_variable_set(:@encrypted_path, enc)
+      @mod.instance_variable_set(:@decrypted_path, dec)
+      yield enc, dec
+    end
+  end
+
+  def test_age_source_hash_matches_sha256_of_encrypted_file
+    with_tmp_paths do |enc, _|
+      require "digest"
+      assert_equal Digest::SHA256.file(enc).hexdigest, @mod.send(:age_source_hash)
+    end
+  end
+
+  def test_up_to_date_false_when_decrypted_dir_absent
+    with_tmp_paths do |_, dec|
+      refute File.exist?(dec)
+      refute @mod.send(:up_to_date?)
+    end
+  end
+
+  def test_up_to_date_false_when_decrypted_dir_empty
+    with_tmp_paths do |_, dec|
+      FileUtils.mkdir_p(dec)
+      refute @mod.send(:up_to_date?)
+    end
+  end
+
+  def test_up_to_date_false_when_stamp_missing
+    with_tmp_paths do |_, dec|
+      FileUtils.mkdir_p(dec)
+      File.write(File.join(dec, "git_identity.yml"), "name: foo\n")
+      refute @mod.send(:up_to_date?)
+    end
+  end
+
+  def test_up_to_date_true_when_stamp_matches_current_archive
+    with_tmp_paths do |enc, dec|
+      FileUtils.mkdir_p(dec)
+      File.write(File.join(dec, ".age-source-sha256"), Digest::SHA256.file(enc).hexdigest)
+      assert @mod.send(:up_to_date?)
+    end
+  end
+
+  def test_up_to_date_false_when_stamp_matches_different_archive
+    # Simulates "user pulled a newer personal.age" — stamp is from the
+    # previous archive, current archive has a different hash → re-decrypt.
+    with_tmp_paths do |enc, dec|
+      FileUtils.mkdir_p(dec)
+      # Stamp from an older (now-overwritten) archive
+      File.write(File.join(dec, ".age-source-sha256"), "a" * 64)
+      refute @mod.send(:up_to_date?)
+      # Sanity — the current archive still produces its own valid hash
+      refute_equal "a" * 64, Digest::SHA256.file(enc).hexdigest
+    end
+  end
+
+  def test_backup_existing_personal_moves_dir_aside
+    with_tmp_paths do |_, dec|
+      FileUtils.mkdir_p(dec)
+      File.write(File.join(dec, "git_identity.yml"), "name: old\n")
+
+      @mod.send(:backup_existing_personal)
+
+      refute File.exist?(dec), "Original decrypted dir should have moved"
+      backups = Dir.children(File.dirname(dec)).grep(/\Apersonal\.bak-/)
+      assert_equal 1, backups.length
+      assert_equal "name: old\n",
+                   File.read(File.join(File.dirname(dec), backups.first, "git_identity.yml"))
+    end
+  end
+
+  def test_backup_existing_personal_noop_when_dir_absent
+    with_tmp_paths do |_, dec|
+      refute File.exist?(dec)
+      # Must not raise and must not create anything
+      @mod.send(:backup_existing_personal)
+      refute File.exist?(dec)
+    end
+  end
+
+  def test_backup_existing_personal_noop_when_dir_empty
+    with_tmp_paths do |_, dec|
+      FileUtils.mkdir_p(dec)
+      @mod.send(:backup_existing_personal)
+      # Empty dir stays as-is, no backup created
+      assert File.directory?(dec)
+      assert Dir.empty?(dec)
+    end
+  end
+
   private
 
   def with_env(vars)

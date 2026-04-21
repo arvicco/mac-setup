@@ -51,9 +51,11 @@ module MacSetup
 
     def install_oh_my_zsh
       logger.info "Installing Oh My Zsh..."
+      # stream: installer prints a banner and runs for a few seconds;
+      # buffering it just to log "OK" at the end offers no value.
       cmd.run(
         'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended',
-        abort_on_fail: false
+        abort_on_fail: false, stream: true
       )
     end
 

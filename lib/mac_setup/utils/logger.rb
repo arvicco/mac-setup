@@ -11,20 +11,37 @@ module MacSetup
         reset:  "\e[0m"
       }.freeze
 
+      # log_file: optional IO (or nil). When provided, every log line is
+      # also appended to it without ANSI codes so the file reads cleanly.
+      # Streamed command output (cmd.run(..., stream: true)) bypasses
+      # this path — for those, terminal scrollback is the source of truth.
+      def initialize(log_file: nil)
+        @log_file = log_file
+      end
+
       def info(msg)
-        puts "#{COLORS[:blue]}[INFO]#{COLORS[:reset]} #{msg}"
+        emit("INFO", COLORS[:blue], msg, $stdout)
       end
 
       def success(msg)
-        puts "#{COLORS[:green]}[ OK ]#{COLORS[:reset]} #{msg}"
+        emit(" OK ", COLORS[:green], msg, $stdout)
       end
 
       def warn(msg)
-        puts "#{COLORS[:yellow]}[WARN]#{COLORS[:reset]} #{msg}"
+        emit("WARN", COLORS[:yellow], msg, $stdout)
       end
 
       def error(msg)
-        $stderr.puts "#{COLORS[:red]}[ERR ]#{COLORS[:reset]} #{msg}"
+        emit("ERR ", COLORS[:red], msg, $stderr)
+      end
+
+      private
+
+      def emit(tag, color, msg, io)
+        io.puts "#{color}[#{tag}]#{COLORS[:reset]} #{msg}"
+        return unless @log_file
+        @log_file.puts "[#{tag}] #{msg}"
+        @log_file.flush
       end
     end
   end

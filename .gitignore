@@ -15,6 +15,12 @@
 # Decrypted personal config (secrets, dotfiles, etc.)
 /config/personal/
 
+# Backup of stale decrypted personal/ when Secrets re-decrypts a fresher archive
+/config/personal.bak-*/
+
+# Per-run setup logs
+/log/
+
 # Editor
 *.swp
 *.swo

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "optparse"
 
 module MacSetup
@@ -44,10 +45,12 @@ module MacSetup
         return
       end
 
-      logger = Utils::Logger.new
+      log_file = open_log_file
+      logger = Utils::Logger.new(log_file: log_file)
       cmd = Utils::CommandRunner.new(logger: logger)
 
       logger.info "Mac Setup v#{MacSetup::VERSION}"
+      logger.info "Log: #{log_file.path}" if log_file
       logger.info "=" * 40
 
       acquire_sudo(logger)
@@ -64,6 +67,27 @@ module MacSetup
 
       logger.info ""
       logger.success "All done! Open a new terminal for all tools to be available."
+    ensure
+      log_file&.close
+    end
+
+    # Opens a per-run log file at log/setup-<timestamp>.log in the repo.
+    # Gitignored. Captures everything Logger emits (info/success/warn/error).
+    # Does NOT capture output from streamed commands (cmd.run(..., stream: true))
+    # — those inherit the parent's stdout/stderr directly; use terminal
+    # scrollback if you need the brew/nvm body text.
+    def open_log_file
+      log_dir = File.join(MacSetup::ROOT, "log")
+      FileUtils.mkdir_p(log_dir)
+      path = File.join(log_dir, "setup-#{Time.now.strftime("%Y%m%d-%H%M%S")}.log")
+      file = File.open(path, "a")
+      file.sync = true
+      file
+    rescue StandardError => e
+      # If we can't open the log file, carry on without it — better to
+      # run setup and lose the trace than refuse to run at all.
+      warn "Could not open log file (#{e.message}); continuing without file logging."
+      nil
     end
 
     private
