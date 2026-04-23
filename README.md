@@ -98,7 +98,11 @@ ruby bin/setup --all \
 18. **SSH** — Generates `~/.ssh/id_ed25519` (general-purpose). Installs `~/.ssh/config` from `config/personal/ssh_config` when present. Union-merges `config/personal/known_hosts` into `~/.ssh/known_hosts` (dedup, preserves existing). The key is added to the macOS keychain when a GUI SSH agent is reachable. *Opt-in:* `--github-ssh` also generates `~/.ssh/id_ed25519_github` (dedicated GitHub key). Default is HTTPS for github.com via `gh`'s credential helper — no dedicated SSH key to manage or leak.
 19. **GitHub Auth** — Reads `config/personal/gh_token`, runs `gh auth login --with-token` (skip if already authed). `gh`'s credential helper then handles HTTPS pushes to `https://github.com/...` automatically. *Opt-in:* `--github-ssh` additionally uploads `~/.ssh/id_ed25519_github.pub` via `gh ssh-key add` titled `mac-setup: <hostname>` for SSH-protocol remotes.
 20. **Rclone** — Copies `config/personal/rclone.conf` to `~/.config/rclone/rclone.conf` with `0600` permissions (the file holds OAuth tokens for cloud remotes).
-21. **Tailscale** — Joins this Mac to your tailnet. Reads `config/personal/tailscale.yml` (OAuth client creds + tags), installs `tailscaled` as a system daemon (headless, survives reboots), mints a short-lived single-use auth key via the Tailscale API, runs `tailscale up --ssh --accept-dns`.
+21. **Tailscale** — Mode is picked per-machine by what's in `config/personal/Brewfile`:
+    - `brew "tailscale"` (headless server) → installs `tailscaled` as a system daemon (survives reboots without a login), reads `config/personal/tailscale.yml` for OAuth creds + tags, mints a short-lived single-use auth key, runs `tailscale up --ssh --accept-dns`.
+    - `cask "tailscale-app"` (admin workstation) → module skips headless setup; sign in via the menu bar GUI. `tailscale.yml` is ignored in this mode.
+    - Both installed → hard error (they conflict: the Mac registers twice in the tailnet and the CLI hits whichever daemon grabbed the socket first). Pick one.
+    - Neither installed → skipped.
 
 ## Manual steps after setup
 
@@ -110,7 +114,7 @@ Some macOS security restrictions require manual interaction — these can't be s
   - Accessibility → enable karabiner_grabber
   - Allow the system extension when macOS prompts
 
-**One-time Tailscale admin setup (before first Tailscale run):**
+**One-time Tailscale admin setup (formula/headless mode only — skip for cask/GUI mode):**
 - [ ] Create an OAuth client at https://login.tailscale.com/admin/settings/oauth with scope `auth_keys` (write). Save the client ID + secret into `config/personal/tailscale.yml`.
 - [ ] Define a tag in your ACL policy with yourself as a `tagOwner`, e.g.:
   ```json

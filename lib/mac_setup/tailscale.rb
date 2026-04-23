@@ -10,22 +10,54 @@ module MacSetup
     CONFIG_FILE = File.join("config", "personal", "tailscale.yml")
     TAILSCALE   = "/opt/homebrew/bin/tailscale"
     TAILSCALED  = "/opt/homebrew/bin/tailscaled"
+    CASK_APP    = "/Applications/Tailscale.app"
     OAUTH_TOKEN_URL = "https://api.tailscale.com/api/v2/oauth/token"
     OAUTH_KEY_URL   = "https://api.tailscale.com/api/v2/tailnet/-/keys"
     # Auth keys only need to live long enough for `tailscale up` to consume
     # them. 5 min gives generous headroom for slow networks.
     KEY_TTL_SECONDS = 300
 
+    # Two legal modes, picked per-machine by which package the user put in
+    # their personal Brewfile:
+    #   - formula (`brew "tailscale"`) — headless daemon for always-on servers
+    #   - cask    (`cask "tailscale-app"`) — GUI app for admin workstations
+    # Running both simultaneously registers the Mac twice in the tailnet
+    # (one tagged, one under the personal account) and the CLI hits whichever
+    # socket bound first, producing a client/server version-mismatch warning.
     def run
-      config_path = File.join(MacSetup::ROOT, CONFIG_FILE)
-      unless File.exist?(config_path)
-        logger.info "No #{CONFIG_FILE}; skipping Tailscale setup."
+      formula = formula_installed?
+      cask    = cask_installed?
+
+      if formula && cask
+        logger.error "Both tailscale formula and tailscale-app cask are installed."
+        logger.error "They conflict: each registers the Mac as a separate device, and the CLI"
+        logger.error "hits whichever daemon grabbed the control socket first."
+        logger.error "Pick one in config/personal/Brewfile and uninstall the other:"
+        logger.error "  headless server → keep `brew \"tailscale\"`, `brew uninstall --cask tailscale-app`"
+        logger.error "  admin workstation → keep `cask \"tailscale-app\"`, `brew uninstall tailscale`"
         return
       end
 
-      unless File.executable?(TAILSCALE)
-        logger.error "#{TAILSCALE} not found — ensure Brewfile installed tailscale."
-        logger.error "Fix: `brew install tailscale` or re-run `ruby bin/setup homebrew`, then re-run this module."
+      if cask
+        logger.info "Tailscale GUI app detected; sign in via the menu bar. Skipping headless setup."
+        return
+      end
+
+      config_path = File.join(MacSetup::ROOT, CONFIG_FILE)
+
+      unless formula
+        if File.exist?(config_path)
+          logger.warn "#{CONFIG_FILE} exists but no tailscale package is installed."
+          logger.warn "Add `brew \"tailscale\"` (headless) or `cask \"tailscale-app\"` (GUI) to config/personal/Brewfile."
+        else
+          logger.info "No #{CONFIG_FILE} and no tailscale package installed; skipping Tailscale setup."
+        end
+        return
+      end
+
+      # Formula-only path below.
+      unless File.exist?(config_path)
+        logger.info "No #{CONFIG_FILE}; skipping Tailscale setup."
         return
       end
 
@@ -77,6 +109,14 @@ module MacSetup
     end
 
     private
+
+    def formula_installed?
+      File.executable?(TAILSCALE)
+    end
+
+    def cask_installed?
+      File.directory?(CASK_APP)
+    end
 
     def already_connected?
       stdout, _stderr, status = cmd.run(TAILSCALE, "status", "--json", quiet: true)

@@ -192,13 +192,13 @@ ruby bin/setup secrets
 | `git_identity.yml` | YAML: `name`, `email` | GitConfig module |
 | `ssh_config` | Standard SSH config format | Ssh module (copied to `~/.ssh/config`) |
 | `known_hosts` | SSH known hosts | Ssh module — union-merged into `~/.ssh/known_hosts` (no duplicates, existing entries preserved) |
-| `tailscale.yml` | YAML: `oauth_client_id`, `oauth_client_secret`, `tags`, `extra_up_args` (opt) | Tailscale module — mints single-use auth keys via OAuth to join the tailnet |
+| `tailscale.yml` | YAML: `oauth_client_id`, `oauth_client_secret`, `tags`, `extra_up_args` (opt) | Tailscale module — **only used in formula/headless mode** (`brew "tailscale"` in the personal Brewfile). Ignored when `cask "tailscale-app"` is installed — in GUI mode you sign in via the menu bar. Mints single-use auth keys via OAuth to join the tailnet. |
 | `autologin.yml` | YAML: `username`, `password` | AutoLogin module — only applied when `bin/setup --autologin` is passed (per-install opt-in, since the yml ships in the shared archive but only home-server installs want boot-time auto-login). Uses `sysadminctl -autologin set`. FileVault must be OFF. |
 | `rclone.conf` | rclone INI-style config (OAuth tokens for cloud remotes) | Rclone module — copied to `~/.config/rclone/rclone.conf` (0600) |
 | `iterm2.plist` | binary plist | iTerm2 module — copied to `~/Library/Preferences/com.googlecode.iterm2.plist` (skipped if iTerm2 running) |
 | `gh_token` | Plain text, one line | GithubAuth module — runs `gh auth login --with-token`. Only runs `gh ssh-key add` when `--github-ssh` flag is passed. |
 | `claude/settings.json`, `claude/settings.local.json` | JSON | ClaudeCode module — copied into `~/.claude/` (existing targets backed up to `.bak-<timestamp>`). Note: `settings.local.json` is per-machine by convention — it can carry absolute paths and trust decisions from the source Mac, so review after first run if you harvested from a different machine. |
-| `Brewfile` | Brewfile format | Homebrew module — **personal overlay applied after core `config/Brewfile`**. Harvester dumps all live packages here; prune before packing so only your desired extras travel. |
+| `Brewfile` | Brewfile format | Homebrew module — **personal overlay applied after core `config/Brewfile`**. Harvester dumps all live packages here; prune before packing so only your desired extras travel. Role-dependent packages live here, not in core: `brew "tailscale"` (headless server) vs `cask "tailscale-app"` (admin workstation) is a per-machine choice — pick exactly one. |
 | `macos_defaults.yml` | YAML | MacosDefaults module — **personal overlay applied after core `config/macos_defaults.yml`**, with core-wins on conflicts (any entry whose `domain/key/current_host` matches a core entry is dropped). Prune before packing. |
 | `keyboard_remapping.json` | hidutil JSON | Manual review → future Keyboard module |
 
