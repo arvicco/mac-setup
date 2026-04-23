@@ -30,8 +30,9 @@ module MacSetup
 
       if formula && cask
         logger.error "Both tailscale formula and tailscale-app cask are installed."
-        logger.error "They conflict: each registers the Mac as a separate device, and the CLI"
-        logger.error "hits whichever daemon grabbed the control socket first."
+        logger.error "They conflict: each registers the Mac as a separate device in your tailnet"
+        logger.error "(visible as two entries in the admin console, e.g. `noto` + `noto-1`), and"
+        logger.error "the CLI hits whichever daemon grabbed the control socket first."
         logger.error "Pick one in config/personal/Brewfile and uninstall the other:"
         logger.error "  headless server → keep `brew \"tailscale\"`, `brew uninstall --cask tailscale-app`"
         logger.error "  admin workstation → keep `cask \"tailscale-app\"`, `brew uninstall tailscale`"
@@ -43,10 +44,8 @@ module MacSetup
         return
       end
 
-      config_path = File.join(MacSetup::ROOT, CONFIG_FILE)
-
       unless formula
-        if File.exist?(config_path)
+        if config_present?
           logger.warn "#{CONFIG_FILE} exists but no tailscale package is installed."
           logger.warn "Add `brew \"tailscale\"` (headless) or `cask \"tailscale-app\"` (GUI) to config/personal/Brewfile."
         else
@@ -55,8 +54,7 @@ module MacSetup
         return
       end
 
-      # Formula-only path below.
-      unless File.exist?(config_path)
+      unless config_present?
         logger.info "No #{CONFIG_FILE}; skipping Tailscale setup."
         return
       end
@@ -116,6 +114,14 @@ module MacSetup
 
     def cask_installed?
       File.directory?(CASK_APP)
+    end
+
+    def config_path
+      File.join(MacSetup::ROOT, CONFIG_FILE)
+    end
+
+    def config_present?
+      File.exist?(config_path)
     end
 
     def already_connected?

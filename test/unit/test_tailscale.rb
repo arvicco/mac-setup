@@ -13,21 +13,16 @@ class TestTailscale < Minitest::Test
     )
   end
 
-  def stub_modes(formula:, cask:)
+  def stub_state(formula:, cask:, config_present: false)
     @mod.define_singleton_method(:formula_installed?) { formula }
     @mod.define_singleton_method(:cask_installed?) { cask }
+    @mod.define_singleton_method(:config_present?) { config_present }
   end
 
-  # Silence the parallel write to $stdout/$stderr so test output stays
-  # readable; assertions run against the log_file StringIO instead.
-  def run_silently
-    orig_out, orig_err = $stdout, $stderr
-    $stdout = StringIO.new
-    $stderr = StringIO.new
-    yield
-  ensure
-    $stdout = orig_out
-    $stderr = orig_err
+  # capture_io silences stdout/stderr for the block; assertions run
+  # against the Logger's log_file buffer (@log_io) instead.
+  def silently
+    capture_io { yield }
   end
 
   def test_module_name
@@ -90,50 +85,30 @@ class TestTailscale < Minitest::Test
   # on a Mac that has the GUI cask installed (and vice versa). Running
   # both simultaneously registers the Mac twice in the tailnet.
   def test_run_errors_when_both_formula_and_cask_are_installed
-    stub_modes(formula: true, cask: true)
-    run_silently { @mod.run }
+    stub_state(formula: true, cask: true)
+    silently { @mod.run }
     assert_operator @logger.error_count, :>, 0
     assert_match(/Both tailscale formula and tailscale-app cask/, @log_io.string)
+    assert_match(/admin console.*noto/, @log_io.string)
   end
 
   def test_run_skips_headless_setup_when_only_cask_is_installed
-    stub_modes(formula: false, cask: true)
-    run_silently { @mod.run }
+    stub_state(formula: false, cask: true)
+    silently { @mod.run }
     assert_equal 0, @logger.error_count
     assert_match(/GUI app detected.*[Ss]kipping/, @log_io.string)
   end
 
   def test_run_warns_when_config_present_but_no_package_installed
-    stub_modes(formula: false, cask: false)
-    Dir.mktmpdir do |tmp|
-      config_dir = File.join(tmp, "config", "personal")
-      FileUtils.mkdir_p(config_dir)
-      File.write(File.join(config_dir, "tailscale.yml"), "oauth_client_id: real\n")
-      with_root(tmp) { run_silently { @mod.run } }
-    end
+    stub_state(formula: false, cask: false, config_present: true)
+    silently { @mod.run }
     assert_match(/exists but no tailscale package is installed/, @log_io.string)
   end
 
   def test_run_silently_skips_when_neither_package_nor_config_present
-    stub_modes(formula: false, cask: false)
-    Dir.mktmpdir do |tmp|
-      with_root(tmp) { run_silently { @mod.run } }
-    end
+    stub_state(formula: false, cask: false, config_present: false)
+    silently { @mod.run }
     assert_equal 0, @logger.error_count
     assert_match(/No .*tailscale\.yml.*skipping/, @log_io.string)
-  end
-
-  private
-
-  # Point MacSetup::ROOT at a tmp dir for the duration of the block so
-  # tests can control whether config/personal/tailscale.yml exists.
-  def with_root(path)
-    original = MacSetup::ROOT
-    MacSetup.send(:remove_const, :ROOT)
-    MacSetup.const_set(:ROOT, path)
-    yield
-  ensure
-    MacSetup.send(:remove_const, :ROOT)
-    MacSetup.const_set(:ROOT, original)
   end
 end
