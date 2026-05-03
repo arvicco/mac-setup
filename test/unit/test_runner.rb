@@ -36,4 +36,14 @@ class TestRunner < Minitest::Test
     missing = module_files - registered
     assert_empty missing, "These module files are not in Runner::MODULES: #{missing.join(', ')}"
   end
+
+  def test_dotfiles_runs_before_claude_code
+    modules = MacSetup::Runner::MODULES
+    dotfiles_idx = modules.index(MacSetup::Dotfiles)
+    claude_idx   = modules.index(MacSetup::ClaudeCode)
+    refute_nil dotfiles_idx, "Dotfiles must be registered in Runner::MODULES"
+    refute_nil claude_idx,   "ClaudeCode must be registered in Runner::MODULES"
+    assert_operator dotfiles_idx, :<, claude_idx,
+                    "Dotfiles must precede ClaudeCode (hooks symlink depends on dotfiles)"
+  end
 end

@@ -10,6 +10,7 @@ module MacSetup
       Homebrew,
       Secrets,
       Node,
+      Dotfiles,
       ClaudeCode,
       Cask,
       MacosDefaults,

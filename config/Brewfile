@@ -28,6 +28,7 @@ brew "wireshark"
 brew "yt-dlp"
 
 # Applications (via Homebrew Cask)
+cask "claude"
 cask "claude-code"
 cask "cursor"
 cask "font-iosevka"

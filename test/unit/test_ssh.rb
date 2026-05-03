@@ -25,11 +25,10 @@ class TestSsh < Minitest::Test
       logger: MacSetup::Utils::Logger.new,
       cmd: MacSetup::Utils::CommandRunner.new(logger: MacSetup::Utils::Logger.new),
     )
-    mod.stub(:github_key_on_disk?, false) do
-      keys = mod.keys_to_generate
-      assert_equal 1, keys.length
-      assert_equal "id_ed25519", keys.first[:file]
-    end
+    mod.define_singleton_method(:github_key_on_disk?) { false }
+    keys = mod.keys_to_generate
+    assert_equal 1, keys.length
+    assert_equal "id_ed25519", keys.first[:file]
   end
 
   def test_keys_to_generate_with_github_ssh_flag_includes_github_key
@@ -38,14 +37,13 @@ class TestSsh < Minitest::Test
       cmd: MacSetup::Utils::CommandRunner.new(logger: MacSetup::Utils::Logger.new),
       options: { github_ssh: true },
     )
-    mod.stub(:github_key_on_disk?, false) do
-      files = mod.keys_to_generate.map { |k| k[:file] }
-      assert_equal %w[id_ed25519 id_ed25519_github], files
-      # github key carries a descriptive comment to help identify it on
-      # GitHub's Settings → SSH Keys list
-      github = mod.keys_to_generate.find { |k| k[:file] == "id_ed25519_github" }
-      assert_equal "github", github[:comment]
-    end
+    mod.define_singleton_method(:github_key_on_disk?) { false }
+    files = mod.keys_to_generate.map { |k| k[:file] }
+    assert_equal %w[id_ed25519 id_ed25519_github], files
+    # github key carries a descriptive comment to help identify it on
+    # GitHub's Settings → SSH Keys list
+    github = mod.keys_to_generate.find { |k| k[:file] == "id_ed25519_github" }
+    assert_equal "github", github[:comment]
   end
 
   # If id_ed25519_github already exists on disk from an earlier run
@@ -58,10 +56,9 @@ class TestSsh < Minitest::Test
       logger: MacSetup::Utils::Logger.new,
       cmd: MacSetup::Utils::CommandRunner.new(logger: MacSetup::Utils::Logger.new),
     )
-    mod.stub(:github_key_on_disk?, true) do
-      files = mod.keys_to_generate.map { |k| k[:file] }
-      assert_equal %w[id_ed25519 id_ed25519_github], files
-    end
+    mod.define_singleton_method(:github_key_on_disk?) { true }
+    files = mod.keys_to_generate.map { |k| k[:file] }
+    assert_equal %w[id_ed25519 id_ed25519_github], files
   end
 
   def test_read_host_lines_drops_blanks
