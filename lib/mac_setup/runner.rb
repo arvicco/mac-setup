@@ -54,8 +54,14 @@ module MacSetup
       logger.info "Log: #{log_file.path}" if log_file
       logger.info "=" * 40
 
-      acquire_sudo(logger)
       modules_to_run = select_modules(logger)
+
+      if modules_to_run.empty?
+        logger.warn "No modules to run."
+        return
+      end
+
+      acquire_sudo(logger)
 
       modules_to_run.each do |mod_class|
         mod = mod_class.new(logger: logger, cmd: cmd, options: @options)
