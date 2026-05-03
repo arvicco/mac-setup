@@ -21,6 +21,9 @@
 # Per-run setup logs
 /log/
 
+# Code-review agent worktrees (created by /cr)
+/.claude/worktrees/
+
 # Editor
 *.swp
 *.swo

@@ -112,20 +112,34 @@ module MacSetup
     # Deep-merges the snippet's `hooks` block into settings.json:
     # per-event hook arrays are concatenated, then deduped by content so
     # re-runs don't grow the array. Backs up settings.json before any
-    # change. Returns :merged / :unchanged / :missing.
+    # change. Returns :merged / :unchanged / :missing / :skipped.
     def merge_snippet_hooks(snippet_path, settings_path)
       return :missing unless File.exist?(snippet_path)
 
-      snippet = JSON.parse(File.read(snippet_path))
+      snippet = parse_json_or_skip(snippet_path)
+      return :skipped if snippet.nil?
       snippet_hooks = snippet["hooks"] || {}
 
       had_settings = File.exist?(settings_path)
-      current = had_settings ? JSON.parse(File.read(settings_path)) : {}
+      if had_settings
+        current = parse_json_or_skip(settings_path)
+        return :skipped if current.nil?
+      else
+        current = {}
+      end
       current_hooks = current["hooks"] || {}
 
       merged_hooks = merge_hooks(current_hooks, snippet_hooks)
+      # Two no-op cases:
+      #   1. settings.json existed and the merge yields no new entries.
+      #   2. settings.json was absent and the snippet has no hooks worth
+      #      writing (don't manufacture a stub file the user never had).
       if had_settings && merged_hooks == current_hooks
         logger.info "#{settings_path} already has snippet hooks; no change."
+        return :unchanged
+      end
+      if !had_settings && merged_hooks.empty?
+        logger.info "Snippet has no hooks and #{settings_path} is absent; nothing to do."
         return :unchanged
       end
 
@@ -140,6 +154,17 @@ module MacSetup
       File.write(settings_path, JSON.pretty_generate(current) + "\n")
       logger.success "Merged hooks from #{File.basename(snippet_path)} into #{settings_path}"
       :merged
+    end
+
+    # Returns parsed JSON or nil. On parse failure logs an error and
+    # returns nil so the caller can :skip rather than crash the run.
+    # Atomic-actions rule: refuse to clobber an unfamiliar file.
+    def parse_json_or_skip(path)
+      JSON.parse(File.read(path))
+    rescue JSON::ParserError => e
+      logger.error "#{path} is not valid JSON: #{e.message.lines.first&.strip}"
+      logger.error "Refusing to merge — fix or move the file aside, then re-run."
+      nil
     end
 
     def merge_hooks(base, overlay)

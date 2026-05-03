@@ -116,6 +116,7 @@ module MacSetup
       harvest_iterm2(logger)
       harvest_autologin_template(logger)
       harvest_tailscale_template(logger)
+      harvest_dotfiles_template(logger)
       harvest_macos_defaults(logger)
       harvest_brewfile(logger)
       harvest_keyboard(logger)
@@ -414,6 +415,36 @@ module MacSetup
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, template)
       logger.info "  + tailscale.yml (template — fill in OAuth creds)"
+      logger.info ""
+    end
+
+    # ---------------------------------------------------------------- Dotfiles repo
+    #
+    # The Dotfiles module clones a git repo into ~/dotfiles. The repo URL
+    # is hand-authored — there's no live source on the Mac to harvest it
+    # from (the user's own dotfiles repo is whichever one they want to
+    # use). Emit a template so future fresh harvests carry a placeholder
+    # that the user fills in (or deletes to skip the module).
+
+    def harvest_dotfiles_template(logger)
+      logger.info "Dotfiles (template):"
+      path = File.join(output_dir, "dotfiles.yml")
+      if File.exist?(path)
+        logger.info "  dotfiles.yml already present — leaving as-is"
+        logger.info ""
+        return
+      end
+      template = <<~YAML
+        # Git repo cloned into ~/dotfiles before the ClaudeCode module runs.
+        # ClaudeCode then symlinks ~/.claude/hooks -> ~/dotfiles/claude/hooks
+        # and merges ~/dotfiles/claude/settings.snippet.json into
+        # ~/.claude/settings.json. Delete this file to skip the Dotfiles
+        # module entirely.
+        repo: REPLACE_ME
+      YAML
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, template)
+      logger.info "  + dotfiles.yml (template — fill in the repo URL, or delete the file to skip)"
       logger.info ""
     end
 

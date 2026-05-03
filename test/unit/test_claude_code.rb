@@ -200,6 +200,41 @@ class TestClaudeCode < Minitest::Test
     assert_equal({}, backup_data["hooks"], "backup must capture pre-merge state")
   end
 
+  def test_merge_snippet_returns_skipped_when_settings_json_is_malformed
+    snippet = write_snippet("Stop" => [stop_hook("x.sh")])
+    settings = File.join(@dest, "settings.json")
+    File.write(settings, "{not valid json")
+
+    result = silently { @mod.send(:merge_snippet_hooks, snippet, settings) }
+
+    assert_equal :skipped, result
+    assert_operator @logger.error_count, :>, 0
+    assert_equal "{not valid json", File.read(settings), "must not clobber malformed settings.json"
+  end
+
+  def test_merge_snippet_returns_skipped_when_snippet_is_malformed
+    snippet = File.join(@dotfiles, "settings.snippet.json")
+    File.write(snippet, "{not valid json")
+    settings = File.join(@dest, "settings.json")
+
+    result = silently { @mod.send(:merge_snippet_hooks, snippet, settings) }
+
+    assert_equal :skipped, result
+    assert_operator @logger.error_count, :>, 0
+    refute File.exist?(settings), "must not create settings.json from a bad snippet"
+  end
+
+  def test_merge_snippet_does_not_create_settings_when_snippet_hooks_empty
+    snippet = File.join(@dotfiles, "settings.snippet.json")
+    File.write(snippet, JSON.generate({})) # no hooks key, no settings.json yet
+    settings = File.join(@dest, "settings.json")
+
+    result = silently { @mod.send(:merge_snippet_hooks, snippet, settings) }
+
+    assert_equal :unchanged, result
+    refute File.exist?(settings), "must not write a stub settings.json with no hooks to merge"
+  end
+
   def test_merge_snippet_idempotent_on_rerun
     snippet = write_snippet("Stop" => [stop_hook("x.sh")])
     settings = File.join(@dest, "settings.json")

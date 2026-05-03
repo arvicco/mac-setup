@@ -2,7 +2,9 @@
 
 require "test_helper"
 require "fileutils"
+require "open3"
 require "stringio"
+require "tempfile"
 require "tmpdir"
 require "yaml"
 
