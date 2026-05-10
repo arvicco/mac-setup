@@ -11,13 +11,16 @@
 #   2. System Settings -> General -> Sharing -> turn on Remote Login
 #
 # Then from the CONTROLLER:
-#   ./install-ssh-controller.sh <target-ip> [bin/setup flags...]
+#   ./install-ssh-controller.sh <target-ip> [--ssh-user <name>] [bin/setup flags...]
 #
 # Example:
 #   ./install-ssh-controller.sh 192.168.1.50 \
+#     --ssh-user admin \
 #     --hostname my-mac \
 #     --git-name "Jane Doe" \
 #     --git-email jane@example.com
+#
+# --ssh-user defaults to "admin" if omitted.
 #
 # After this completes, log into the target graphically and run:
 #   cd ~/mac-setup && ./install-ssh-target.sh
@@ -27,22 +30,41 @@
 
 set -euo pipefail
 
+info() { printf '\033[36m==> %s\033[0m\n' "$*"; }
+warn() { printf '\033[33m!!  %s\033[0m\n' "$*" >&2; }
+die()  { printf '\033[31mERR %s\033[0m\n' "$*" >&2; exit 1; }
+
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 <target-ip> [--hostname X --git-name X --git-email X ...]" >&2
+  echo "Usage: $0 <target-ip> [--ssh-user <name>] [bin/setup flags...]" >&2
   exit 1
 fi
 
 TARGET_IP="$1"
 shift
-SETUP_ARGS=("$@")
 
-TARGET_USER="${MAC_SETUP_TARGET_USER:-admin}"
+TARGET_USER="admin"
+SETUP_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --ssh-user)
+      [ $# -ge 2 ] || die "--ssh-user requires a value"
+      TARGET_USER="$2"
+      shift 2
+      ;;
+    --ssh-user=*)
+      TARGET_USER="${1#--ssh-user=}"
+      [ -n "$TARGET_USER" ] || die "--ssh-user requires a value"
+      shift
+      ;;
+    *)
+      SETUP_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
 TARGET_HOST="$TARGET_USER@$TARGET_IP"
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
-
-info() { printf '\033[36m==> %s\033[0m\n' "$*"; }
-warn() { printf '\033[33m!!  %s\033[0m\n' "$*" >&2; }
-die()  { printf '\033[31mERR %s\033[0m\n' "$*" >&2; exit 1; }
 
 SSH_OPTS=(
   -o StrictHostKeyChecking=accept-new

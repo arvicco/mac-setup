@@ -28,6 +28,8 @@ cd ~/mac-setup
   --git-email jane@example.com
 ```
 
+The target user defaults to `admin`. Override with `--ssh-user <name>` if the first-boot wizard created a different account.
+
 `install-ssh-controller.sh` handles everything else: SSH pubkey, NOPASSWD sudo, Xcode CLT (headless), `softwareupdate --schedule off`, rsync of the repo, and a non-interactive `ruby bin/setup --all` run.
 
 Then log into the target's desktop and run:
