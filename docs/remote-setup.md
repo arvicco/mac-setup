@@ -60,7 +60,7 @@ Two scripts: one runs on the controller to do the bulk of the work, one runs on 
 
 Right after the first-boot wizard:
 
-1. Finish macOS first-boot wizard — create the `admin` user
+1. Finish macOS first-boot wizard — create the `admin` user (or any other name; pass `--ssh-user <name>` to the controller script if you used something different)
 2. System Settings → General → Sharing → turn on **Remote Login**
 
 Everything else is scripted.
