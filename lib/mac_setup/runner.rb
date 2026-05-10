@@ -78,6 +78,8 @@ module MacSetup
         end
       end
 
+      cleanup_secrets(logger)
+
       logger.info ""
       if logger.error_count.zero?
         logger.success "All done! Open a new terminal for all tools to be available."
@@ -121,6 +123,35 @@ module MacSetup
       end
     end
 
+    # Opt-in via --cleanup-secrets. Removes the decrypted config/personal/
+    # tree after a successful run so plaintext secrets (gh_token, tailscale
+    # OAuth client_secret, autologin password) don't sit on disk after a
+    # one-shot bootstrap. The encrypted config/personal.age stays — re-runs
+    # that need personal config will re-decrypt from it (Secrets module
+    # detects the missing dir and re-extracts).
+    #
+    # Skipped if any module errored: the user almost certainly needs to
+    # inspect or re-run, and forcing them to re-type the passphrase is
+    # punishment for an already-bad run.
+    def cleanup_secrets(logger)
+      return unless @options[:cleanup_secrets]
+
+      path = decrypted_personal_path
+      return unless File.directory?(path)
+
+      if logger.error_count > 0
+        logger.warn "--cleanup-secrets requested but #{logger.error_count} module error(s) — keeping config/personal/ for re-run."
+        return
+      end
+
+      FileUtils.rm_rf(path)
+      logger.success "Removed config/personal/ (--cleanup-secrets). Re-run will re-decrypt from personal.age."
+    end
+
+    def decrypted_personal_path
+      File.join(MacSetup::ROOT, "config", "personal")
+    end
+
     def parse_options
       @parser = OptionParser.new do |opts|
         opts.banner = "Usage: setup [options] [module ...]"
@@ -155,6 +186,10 @@ module MacSetup
 
         opts.on("--github-ssh", "Generate a dedicated SSH key for github.com and upload to GitHub (default: HTTPS via gh credential helper)") do
           @options[:github_ssh] = true
+        end
+
+        opts.on("--cleanup-secrets", "After successful run, remove the decrypted config/personal/ directory so plaintext secrets (gh_token, tailscale OAuth secret, autologin password) don't sit on disk. Re-runs re-decrypt from personal.age.") do
+          @options[:cleanup_secrets] = true
         end
 
         opts.on("-h", "--help", "Show this help") do

@@ -75,8 +75,15 @@ ruby bin/setup --all \
   --git-email jane@example.com \
   --passphrase "your-age-passphrase" \
   --autologin \                        # opt in to boot-time auto-login
-  --github-ssh                         # opt in to dedicated GitHub SSH key
+  --github-ssh \                       # opt in to dedicated GitHub SSH key
+  --cleanup-secrets                    # rm config/personal/ after success (see Security note)
 ```
+
+### Security: cleaning up plaintext secrets
+
+The Secrets module decrypts `config/personal.age` → `config/personal/` so other modules can read it. After a run, that directory still contains plaintext: `gh_token` (full GitHub PAT), `tailscale.yml` (OAuth `client_secret`, can mint more keys), `autologin.yml` (login password). For one-shot bootstraps where you don't plan to re-run setup, pass `--cleanup-secrets` so these are removed at the end of a successful run. The encrypted `config/personal.age` stays in place — re-runs that need personal config will re-decrypt from it (you'll re-enter the passphrase).
+
+`--cleanup-secrets` is a no-op when any module errored — the directory is preserved so you can inspect or re-run without re-entering the passphrase.
 
 ## Setup Steps (in execution order)
 

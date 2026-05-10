@@ -168,6 +168,33 @@ git push
 
 ---
 
+## Cleaning up after setup (one-shot bootstraps)
+
+After a successful `bin/setup` run, `config/personal/` is still on disk in plaintext. The sensitive entries:
+
+- **`gh_token`** — full GitHub PAT. `gh auth login --with-token` consumed it (token now also lives in gh's keyring), but the source file remains.
+- **`tailscale.yml`** — OAuth `client_secret`. The auth key was minted and consumed by `tailscale up`, but the OAuth secret can mint more keys.
+- **`autologin.yml`** — login password in plaintext. `sysadminctl` consumed it (encoded copy now in `/etc/kcpassword`), but the source file remains.
+
+For one-shot bootstraps (set up the Mac once, then leave it alone), pass `--cleanup-secrets` to `bin/setup`:
+
+```bash
+ruby bin/setup --all --cleanup-secrets [...other flags]
+```
+
+Or for SSH-controller bootstraps, pass it through as an extra arg:
+
+```bash
+AGE_PASSPHRASE='...' ./install-ssh-controller.sh <ip> --ssh-user admin --cleanup-secrets [...]
+```
+
+What it does:
+- Removes `config/personal/` after all modules complete with no errors.
+- No-ops if any module errored — the directory is preserved so you can inspect or re-run without re-typing the passphrase.
+- Leaves `config/personal.age` (the encrypted source) and any `config/personal.bak-*` backups untouched.
+
+To re-run setup later: just re-run `bin/setup`. The Secrets module sees `personal/` is missing and re-decrypts from `personal.age` after prompting for the passphrase.
+
 ## Re-decrypting (e.g., after a git pull)
 
 If `config/personal/` is empty or missing:

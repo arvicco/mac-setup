@@ -46,4 +46,71 @@ class TestRunner < Minitest::Test
     assert_operator dotfiles_idx, :<, claude_idx,
                     "Dotfiles must precede ClaudeCode (hooks symlink depends on dotfiles)"
   end
+
+  # cleanup_secrets removes the decrypted config/personal/ tree on success
+  # so plaintext secrets (gh_token, tailscale OAuth client_secret, autologin
+  # password) don't sit around on the target after a one-shot bootstrap.
+  # Opt-in via --cleanup-secrets — re-runs that need to tweak config will
+  # still re-decrypt from personal.age.
+  def make_runner_with_personal_dir(tmpdir, cleanup:)
+    personal = File.join(tmpdir, "personal")
+    FileUtils.mkdir_p(personal)
+    File.write(File.join(personal, "gh_token"), "ghp_secret")
+
+    runner = MacSetup::Runner.new
+    runner.instance_variable_set(:@options, cleanup ? {cleanup_secrets: true} : {})
+    runner.define_singleton_method(:decrypted_personal_path) { personal }
+    [runner, personal]
+  end
+
+  def test_cleanup_secrets_removes_personal_dir_when_flag_set_and_no_errors
+    Dir.mktmpdir do |tmpdir|
+      runner, personal = make_runner_with_personal_dir(tmpdir, cleanup: true)
+      logger = MacSetup::Utils::Logger.new
+      capture_io { runner.send(:cleanup_secrets, logger) }
+      refute File.exist?(personal), "personal/ must be removed after success + flag"
+    end
+  end
+
+  def test_cleanup_secrets_keeps_personal_dir_when_errors_present
+    Dir.mktmpdir do |tmpdir|
+      runner, personal = make_runner_with_personal_dir(tmpdir, cleanup: true)
+      logger = MacSetup::Utils::Logger.new
+      capture_io do
+        logger.error("simulated module failure")
+        runner.send(:cleanup_secrets, logger)
+      end
+      assert File.directory?(personal),
+             "personal/ must be preserved when modules errored — user needs it to debug/re-run"
+      assert_equal 1, Dir.children(personal).count { |f| f == "gh_token" }
+    end
+  end
+
+  def test_cleanup_secrets_no_op_when_flag_not_set
+    Dir.mktmpdir do |tmpdir|
+      runner, personal = make_runner_with_personal_dir(tmpdir, cleanup: false)
+      logger = MacSetup::Utils::Logger.new
+      capture_io { runner.send(:cleanup_secrets, logger) }
+      assert File.directory?(personal),
+             "personal/ must be kept when --cleanup-secrets was not passed (opt-in)"
+    end
+  end
+
+  def test_cleanup_secrets_silent_when_personal_dir_does_not_exist
+    Dir.mktmpdir do |tmpdir|
+      nonexistent = File.join(tmpdir, "nonexistent")
+      runner = MacSetup::Runner.new
+      runner.instance_variable_set(:@options, {cleanup_secrets: true})
+      runner.define_singleton_method(:decrypted_personal_path) { nonexistent }
+      logger = MacSetup::Utils::Logger.new
+      capture_io { runner.send(:cleanup_secrets, logger) }
+      # Should not raise; nothing to assert beyond that
+      pass
+    end
+  end
+
+  def test_cleanup_secrets_flag_parses_from_argv
+    runner = MacSetup::Runner.new(["--cleanup-secrets"])
+    assert_equal true, runner.instance_variable_get(:@options)[:cleanup_secrets]
+  end
 end
