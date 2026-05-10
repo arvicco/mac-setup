@@ -24,6 +24,10 @@ On a freshly-unboxed Mac, after the first-boot wizard.
 ### One-liner (fetches and runs `install-gui.sh`)
 
 ```bash
+# Short form (easier to type on a fresh Mac):
+curl -fsSL https://tinyurl.com/278326ts | bash
+
+# Canonical form (use if TinyURL is unreachable — occasional Cloudflare 524s):
 curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.sh | bash
 ```
 
@@ -152,6 +156,10 @@ MAC_SETUP_VM_KEEP=1 rake test:vm   # leave clone running to poke around
 
 **GUI mode — first Mac / local run (on the target):**
 ```bash
+# Short form (easier to type on a fresh Mac):
+curl -fsSL https://tinyurl.com/278326ts | bash
+
+# Canonical form (use if TinyURL is unreachable — occasional Cloudflare 524s):
 curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.sh | bash
 ```
 

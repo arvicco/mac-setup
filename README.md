@@ -9,6 +9,10 @@ Two supported modes — pick based on whether you're sitting at the target or at
 ### GUI mode — run on the target Mac
 
 ```bash
+# Short form (easier to type on a fresh Mac):
+curl -fsSL https://tinyurl.com/278326ts | bash
+
+# Canonical form (use if TinyURL is unreachable — occasional Cloudflare 524s):
 curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.sh | bash
 ```
 
