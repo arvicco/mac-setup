@@ -28,7 +28,7 @@ cd ~/mac-setup
   --git-email jane@example.com
 ```
 
-The target user defaults to `admin`. Override with `--ssh-user <name>` if the first-boot wizard created a different account.
+The target user defaults to `admin`. Override with `--ssh-user <name>` if the first-boot wizard created a different account. (The previous `MAC_SETUP_TARGET_USER` env var was removed in favor of this flag — anyone scripted around it must switch.)
 
 `install-ssh-controller.sh` handles everything else: SSH pubkey, NOPASSWD sudo, Xcode CLT (headless), `softwareupdate --schedule off`, rsync of the repo, and a non-interactive `ruby bin/setup --all` run.
 

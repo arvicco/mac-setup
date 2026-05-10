@@ -175,4 +175,21 @@ class TestTailscale < Minitest::Test
     assert %w[/opt/homebrew /usr/local].include?(prefix),
            "homebrew_prefix returned #{prefix.inspect}, expected /opt/homebrew or /usr/local"
   end
+
+  # extension_loaded? is a best-effort probe: if systemextensionsctl
+  # exits non-zero (sandbox quirks, very old macOS, missing binary),
+  # the result must be "not loaded" without inflating logger.error_count.
+  # The Runner uses error_count to decide whether the module failed —
+  # without `quiet: true` on the cmd.run call, every Mac without
+  # Tailscale would have its Tailscale module marked as failed.
+  def test_extension_loaded_returns_false_and_does_not_record_error_on_probe_failure
+    fake_cmd = Object.new
+    fake_cmd.define_singleton_method(:run) do |*_args, **_kwargs|
+      ["", "boom", Struct.new(:success?, :exitstatus).new(false, 1)]
+    end
+    @mod.instance_variable_set(:@cmd, fake_cmd)
+    refute @mod.send(:extension_loaded?)
+    assert_equal 0, @logger.error_count,
+                 "probe failure must not bump error_count (would mark module as failed)"
+  end
 end

@@ -175,10 +175,17 @@ module MacSetup
     # versions. Run is best-effort — if systemextensionsctl errors out (very
     # old macOS, sandbox quirks) we treat it as "not loaded" rather than
     # blocking the module on a probe failure.
+    #
+    # quiet: true is mandatory here — without it, a non-zero exit from
+    # systemextensionsctl would call logger.error inside CommandRunner
+    # (incrementing error_count, which Runner uses as the module's failure
+    # signal), turning an intentional best-effort probe into a hard module
+    # failure on every Mac without Tailscale.
     def extension_loaded?
       out, _, status = cmd.run(
         "/usr/bin/systemextensionsctl", "list",
         abort_on_fail: false,
+        quiet: true,
       )
       status.success? && out.include?("io.tailscale.")
     end

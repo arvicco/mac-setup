@@ -84,7 +84,7 @@ The script:
 3. Enables NOPASSWD sudo via `/etc/sudoers.d/nopasswd`
 4. Installs Xcode Command Line Tools using the `softwareupdate` sentinel-file trick — **no GUI dialog needed**. Falls back with a clear error if the trick stops working on a future macOS release.
 5. Disables `softwareupdate` auto-schedule so no update fires mid-`brew bundle`
-6. Rsyncs the current working copy of the repo (local WIP changes get tested, not `main`) to `~admin/mac-setup/` on the target
+6. Rsyncs the current working copy of the repo (local WIP changes get tested, not `main`) to `~<ssh-user>/mac-setup/` on the target (defaults to `~admin/mac-setup/`; override via `--ssh-user <name>`)
 7. Runs `ruby bin/setup --all <your-flags>` over SSH with output streaming back
 
 Any args after the IP are forwarded to `bin/setup`. Always pass `--hostname`, `--git-name`, `--git-email` — without them the prompts will hang on an SSH session with no TTY.
