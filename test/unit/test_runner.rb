@@ -113,4 +113,45 @@ class TestRunner < Minitest::Test
     runner = MacSetup::Runner.new(["--cleanup-secrets"])
     assert_equal true, runner.instance_variable_get(:@options)[:cleanup_secrets]
   end
+
+  # acquire_sudo previously used a 50s-keepalive thread to refresh the sudo
+  # timestamp. Fragile: silently fails when (a) macOS shortens the default
+  # timestamp_timeout, (b) brew/cask scripts call `sudo -k`, or (c) the
+  # keepalive thread silently dies. The fix installs a temporary NOPASSWD
+  # entry under /etc/sudoers.d (same pattern install-ssh-controller.sh
+  # uses on remote targets), removed on exit. Tests assert (a) the file
+  # path is pid-uniqued so concurrent runs don't collide, (b) content is
+  # exactly NOPASSWD for the current user, (c) prime failure aborts hard
+  # instead of silently spamming sudo errors, (d) release is a no-op
+  # when nothing was installed (so partial-failure paths don't try to rm
+  # a non-existent file).
+  def test_sudoers_path_includes_process_pid
+    runner = MacSetup::Runner.new
+    expected = "/etc/sudoers.d/mac-setup-#{Process.pid}"
+    assert_equal expected, runner.send(:sudoers_path)
+  end
+
+  def test_sudoers_content_grants_nopasswd_to_current_user
+    runner = MacSetup::Runner.new
+    runner.define_singleton_method(:current_user) { "alice" }
+    assert_equal "alice ALL=(ALL) NOPASSWD: ALL\n", runner.send(:sudoers_content)
+  end
+
+  def test_acquire_sudo_aborts_when_prime_password_fails
+    runner = MacSetup::Runner.new
+    runner.define_singleton_method(:prime_sudo_password) { false }
+    # Stub install path too, in case the abort doesn't fire — would surface
+    # as a real `sudo tee` invocation in the test, easy to spot.
+    runner.define_singleton_method(:write_sudoers_file) { raise "must not be called when prime fails" }
+    logger = MacSetup::Utils::Logger.new
+    assert_raises(SystemExit) { capture_io { runner.send(:acquire_sudo, logger) } }
+  end
+
+  def test_release_sudo_is_no_op_when_nothing_installed
+    runner = MacSetup::Runner.new
+    # Don't set @sudoers_installed — simulating a partial-failure path
+    # where prime succeeded but install bailed before marking installed.
+    runner.define_singleton_method(:system) { |*_args| raise "must not call system when nothing installed" }
+    runner.send(:release_sudo)
+  end
 end

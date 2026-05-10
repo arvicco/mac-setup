@@ -89,6 +89,16 @@ The Secrets module decrypts `config/personal.age` → `config/personal/` so othe
 
 `--cleanup-secrets` is a no-op when any module errored — the directory is preserved so you can inspect or re-run without re-entering the passphrase.
 
+### Security: sudo handling
+
+`bin/setup` prompts once for your password (`sudo -v`) at the start, then writes `/etc/sudoers.d/mac-setup-<pid>` granting NOPASSWD for the duration of the run. Removed on exit (normal exit, exception, abort, Ctrl-C — all covered by `at_exit`). This replaces an earlier 50s-keepalive design that silently failed on long brew runs (sudo cache expiring mid-flight, leading to a flood of `sudo: a password is required` errors).
+
+If mac-setup ever crashes hard (SIGKILL, kernel panic) and leaves an orphaned file, recover with:
+
+```bash
+sudo rm /etc/sudoers.d/mac-setup-*
+```
+
 ## Setup Steps (in execution order)
 
 1. **Hostname** — Prompts for a machine name and sets HostName, ComputerName, and LocalHostName via `scutil`
