@@ -253,9 +253,30 @@
   type: bool
   value: true
 
-# Software Updates — don't let Apple auto-install and reboot this server.
-# "Background security improvements" in System Settings → General →
-# Software Update → Automatic Updates maps to these two keys.
+# Software Updates — every auto-* knob off. A remote Mac that auto-downloads
+# or auto-installs an OS update can stage it in the background and brick SSH
+# on next reboot ("preparing update" leaves networking down). For headless
+# Macs this is a regression we cannot detect remotely; always lock these off.
+# Maps to System Settings → General → Software Update → Automatic Updates.
+# (See test_macos_defaults_config_disables_every_software_update_auto_knob.)
+- domain: /Library/Preferences/com.apple.SoftwareUpdate
+  key: AutomaticCheckEnabled
+  type: bool
+  value: false
+  sudo: true
+
+- domain: /Library/Preferences/com.apple.SoftwareUpdate
+  key: AutomaticDownload
+  type: bool
+  value: false
+  sudo: true
+
+- domain: /Library/Preferences/com.apple.SoftwareUpdate
+  key: AutomaticallyInstallMacOSUpdates
+  type: bool
+  value: false
+  sudo: true
+
 - domain: /Library/Preferences/com.apple.SoftwareUpdate
   key: CriticalUpdateInstall
   type: bool

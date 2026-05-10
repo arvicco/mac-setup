@@ -127,6 +127,32 @@ class TestMacosDefaults < Minitest::Test
     assert_empty @mod.filter_personal(core, personal)
   end
 
+  # Every auto-update knob under com.apple.SoftwareUpdate must be off.
+  # Why: a remote Mac that auto-downloads or auto-installs an OS update can
+  # stage it in the background and brick SSH on next reboot ("preparing
+  # update" leaves networking down). For dozens of headless Macs this is
+  # a regression we cannot detect remotely — keep all of these locked off.
+  REQUIRED_SOFTWARE_UPDATE_KEYS = %w[
+    AutomaticCheckEnabled
+    AutomaticDownload
+    AutomaticallyInstallMacOSUpdates
+    CriticalUpdateInstall
+    ConfigDataInstall
+  ].freeze
+
+  def test_macos_defaults_config_disables_every_software_update_auto_knob
+    entries = YAML.safe_load(File.read(File.join(MacSetup::ROOT, "config/macos_defaults.yml")))
+    sw_entries = entries.select { |e| e["domain"] == "/Library/Preferences/com.apple.SoftwareUpdate" }
+    sw_keys = sw_entries.map { |e| e["key"] }
+
+    REQUIRED_SOFTWARE_UPDATE_KEYS.each do |key|
+      entry = sw_entries.find { |e| e["key"] == key }
+      assert entry, "config/macos_defaults.yml missing SoftwareUpdate key #{key} — present keys: #{sw_keys.inspect}"
+      assert_equal false, entry["value"], "SoftwareUpdate.#{key} must be false (got #{entry["value"].inspect})"
+      assert_equal true,  entry["sudo"],  "SoftwareUpdate.#{key} must have sudo: true (writes /Library/Preferences)"
+    end
+  end
+
   def test_filter_personal_keeps_order_of_surviving_entries
     core = [core_entry]
     personal = [

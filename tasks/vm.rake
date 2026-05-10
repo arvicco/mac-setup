@@ -186,7 +186,11 @@ class VMTest
       "defaults read com.apple.widgets WidgetsEnabled" => "0",
       "defaults read com.apple.menuextra.clock Show24Hour" => "1",
       "defaults read com.apple.WindowManager GloballyEnabled" => "0",
-      # Software Updates (system-level, sudo to read)
+      # Software Updates (system-level, sudo to read) — every auto-* knob
+      # off, so a remote Mac never stages an update that bricks SSH.
+      "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled" => "0",
+      "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload" => "0",
+      "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates" => "0",
       "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall" => "0",
       "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate ConfigDataInstall" => "0",
       "defaults read com.apple.HIToolbox AppleDictationAutoEnable" => "0",
