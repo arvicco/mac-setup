@@ -13,9 +13,13 @@ class TestTailscale < Minitest::Test
     )
   end
 
-  def stub_state(formula:, cask:, config_present: false)
+  def stub_state(formula:, cask:, config_present: false, orphan: false)
     @mod.define_singleton_method(:formula_installed?) { formula }
     @mod.define_singleton_method(:cask_installed?) { cask }
+    # When the cask app is installed, its system extension is loaded too.
+    # An "orphan" is the post-uninstall state where the app is gone but the
+    # extension persists and keeps filtering traffic.
+    @mod.define_singleton_method(:extension_loaded?) { cask || orphan }
     @mod.define_singleton_method(:config_present?) { config_present }
   end
 
@@ -111,4 +115,39 @@ class TestTailscale < Minitest::Test
     assert_equal 0, @logger.error_count
     assert_match(/No .*tailscale\.yml.*skipping/, @log_io.string)
   end
+
+  # Orphan = cask app uninstalled but its system extension stayed loaded.
+  # The extension keeps intercepting host network traffic at the kernel
+  # layer (NEPacketTunnelProvider), silently filtering packets to e.g.
+  # bridge100, which breaks Tart VMs and other local-bridge users with no
+  # surface-level error. The "never both" rule treats orphan-extension as
+  # cask-present for conflict detection, AND aborts on a standalone orphan
+  # because the filtering happens regardless of whether a daemon manages it.
+  def test_run_errors_when_formula_and_orphan_extension_coexist
+    stub_state(formula: true, cask: false, orphan: true)
+    silently { @mod.run }
+    assert_operator @logger.error_count, :>, 0
+    assert_match(/orphan/i, @log_io.string)
+    assert_match(/system extension/i, @log_io.string)
+    refute_match(/install_system_daemon/, @log_io.string,
+                 "must abort before any setup work")
+  end
+
+  def test_run_errors_on_standalone_orphan_extension_without_formula
+    stub_state(formula: false, cask: false, orphan: true)
+    silently { @mod.run }
+    assert_operator @logger.error_count, :>, 0
+    assert_match(/orphan/i, @log_io.string)
+  end
+
+  def test_run_treats_cask_app_with_extension_as_normal_install_not_orphan
+    # cask: true → both app and extension exist; that's a normal install.
+    # Must take the "GUI app detected" path, not the orphan-error path.
+    stub_state(formula: false, cask: true)
+    silently { @mod.run }
+    assert_equal 0, @logger.error_count
+    assert_match(/GUI app detected/, @log_io.string)
+    refute_match(/orphan/i, @log_io.string)
+  end
+
 end

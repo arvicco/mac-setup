@@ -105,6 +105,7 @@ ruby bin/setup --all \
     - `brew "tailscale"` (headless server) → installs `tailscaled` as a system daemon (survives reboots without a login), reads `config/personal/tailscale.yml` for OAuth creds + tags, mints a short-lived single-use auth key, runs `tailscale up --ssh --accept-dns`.
     - `cask "tailscale-app"` (admin workstation) → module skips headless setup; sign in via the menu bar GUI. `tailscale.yml` is ignored in this mode.
     - Both installed → hard error (they conflict: the Mac registers twice in the tailnet and the CLI hits whichever daemon grabbed the socket first). Pick one.
+    - Orphaned cask system extension detected (`io.tailscale.ipn.macsys.network-extension` loaded but `/Applications/Tailscale.app` gone) → hard error with cleanup instructions. Once installed, the cask's NetworkExtension survives `brew uninstall --cask` and silently filters host network traffic at the kernel layer — breaks Tart VMs and other local-bridge users. Removing it requires a Recovery boot to disable SIP, then `systemextensionsctl uninstall`.
     - Neither installed → skipped.
 
 ## Manual steps after setup

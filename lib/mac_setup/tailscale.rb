@@ -24,18 +24,52 @@ module MacSetup
     # Running both simultaneously registers the Mac twice in the tailnet
     # (one tagged, one under the personal account) and the CLI hits whichever
     # socket bound first, producing a client/server version-mismatch warning.
+    #
+    # The cask also drops a NetworkExtension into the kernel that survives
+    # cask removal as an "orphan" and silently filters traffic at the kernel
+    # layer (NEPacketTunnelProvider) — breaking Tart VMs and anything else
+    # using local bridge interfaces. Detection here treats the orphan as
+    # equivalent to "cask present" so the conflict abort fires, and also
+    # aborts on a standalone orphan because the filtering happens regardless
+    # of whether a daemon manages it.
     def run
       formula = formula_installed?
       cask    = cask_installed?
+      orphan  = extension_loaded? && !cask
 
-      if formula && cask
-        logger.error "Both tailscale formula and tailscale-app cask are installed."
-        logger.error "They conflict: each registers the Mac as a separate device in your tailnet"
-        logger.error "(visible as two entries in the admin console, e.g. `noto` + `noto-1`), and"
-        logger.error "the CLI hits whichever daemon grabbed the control socket first."
-        logger.error "Pick one in config/personal/Brewfile and uninstall the other:"
-        logger.error "  headless server → keep `brew \"tailscale\"`, `brew uninstall --cask tailscale-app`"
-        logger.error "  admin workstation → keep `cask \"tailscale-app\"`, `brew uninstall tailscale`"
+      if formula && (cask || orphan)
+        if orphan
+          logger.error "Tailscale formula installed AND an orphaned cask system extension is loaded."
+          logger.error "The orphan extension (io.tailscale.ipn.macsys.network-extension) is filtering"
+          logger.error "host network traffic at the kernel layer with no parent app to manage it —"
+          logger.error "this silently breaks Tart VMs and other local-bridge users."
+          logger.error "Cleanup (requires Recovery boot, SIP must be temporarily disabled):"
+          logger.error "  1. Reboot to Recovery → Terminal → `csrutil disable` → reboot"
+          logger.error "  2. `sudo systemextensionsctl uninstall W5364U7YZB io.tailscale.ipn.macsys.network-extension`"
+          logger.error "  3. Reboot to Recovery → `csrutil enable` → reboot"
+          logger.error "Then re-run mac-setup."
+        else
+          logger.error "Both tailscale formula and tailscale-app cask are installed."
+          logger.error "They conflict: each registers the Mac as a separate device in your tailnet"
+          logger.error "(visible as two entries in the admin console, e.g. `noto` + `noto-1`), and"
+          logger.error "the CLI hits whichever daemon grabbed the control socket first."
+          logger.error "Pick one in config/personal/Brewfile and uninstall the other:"
+          logger.error "  headless server → keep `brew \"tailscale\"`, `brew uninstall --cask tailscale-app`"
+          logger.error "  admin workstation → keep `cask \"tailscale-app\"`, `brew uninstall tailscale`"
+        end
+        return
+      end
+
+      if orphan
+        logger.error "Orphaned tailscale-app system extension is loaded but the cask app is gone."
+        logger.error "io.tailscale.ipn.macsys.network-extension keeps filtering host network traffic"
+        logger.error "at the kernel layer — silently breaks Tart VMs and other local-bridge users."
+        logger.error "Cleanup (requires Recovery boot, SIP must be temporarily disabled):"
+        logger.error "  1. Reboot to Recovery → Terminal → `csrutil disable` → reboot"
+        logger.error "  2. `sudo systemextensionsctl uninstall W5364U7YZB io.tailscale.ipn.macsys.network-extension`"
+        logger.error "  3. Reboot to Recovery → `csrutil enable` → reboot"
+        logger.error "Then re-run mac-setup. Or reinstall the cask if you want the GUI app back:"
+        logger.error "  `brew install --cask tailscale-app`"
         return
       end
 
@@ -114,6 +148,20 @@ module MacSetup
 
     def cask_installed?
       File.directory?(CASK_APP)
+    end
+
+    # The cask deposits a system extension that activates at install time and
+    # is *not* removed by `brew uninstall --cask` (or any non-SIP-disabled
+    # path). We probe its presence by name; bundle-id stays stable across
+    # versions. Run is best-effort — if systemextensionsctl errors out (very
+    # old macOS, sandbox quirks) we treat it as "not loaded" rather than
+    # blocking the module on a probe failure.
+    def extension_loaded?
+      out, _, status = cmd.run(
+        "/usr/bin/systemextensionsctl", "list",
+        abort_on_fail: false,
+      )
+      status.success? && out.include?("io.tailscale.")
     end
 
     def config_path
