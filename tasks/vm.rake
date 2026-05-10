@@ -193,6 +193,11 @@ class VMTest
       "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates" => "0",
       "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall" => "0",
       "sudo defaults read /Library/Preferences/com.apple.SoftwareUpdate ConfigDataInstall" => "0",
+      # Local Network whitelist — exempts RFC1918 from macOS Sequoia/Tahoe's
+      # per-app permission check. One canary CIDR per key (192.168.0.0/16
+      # is the one that actually mattered today: bridge100 lives here).
+      "sudo defaults read com.apple.network.local-network AllowedEthernetLocalNetworkAddresses" => "192.168.0.0/16",
+      "sudo defaults read com.apple.network.local-network AllowedWiFiLocalNetworkAddresses" => "192.168.0.0/16",
       "defaults read com.apple.HIToolbox AppleDictationAutoEnable" => "0",
       # Trackpad (Bluetooth domain may not persist on a machine without a BT trackpad, so skipped here)
       "defaults read NSGlobalDomain com.apple.trackpad.scaling" => "2.5",

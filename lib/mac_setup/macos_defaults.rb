@@ -56,7 +56,15 @@ module MacSetup
     def defaults_argv(entry)
       argv = entry["sudo"] ? ["sudo", "defaults"] : ["defaults"]
       argv << "-currentHost" if entry["current_host"]
-      argv + ["write", entry["domain"], entry["key"], "-#{entry["type"]}", entry["value"].to_s]
+      argv += ["write", entry["domain"], entry["key"], "-#{entry["type"]}"]
+      # Array values must fan out into N positional argv entries — `defaults
+      # write domain key -array v1 v2 v3` is the only correct shape. Scalar
+      # types (bool/int/string/float) take a single trailing value.
+      if entry["value"].is_a?(Array)
+        argv + entry["value"].map(&:to_s)
+      else
+        argv << entry["value"].to_s
+      end
     end
 
     # Drop personal entries that collide with a core entry on the

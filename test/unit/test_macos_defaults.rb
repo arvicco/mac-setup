@@ -39,6 +39,41 @@ class TestMacosDefaults < Minitest::Test
     refute_includes argv, "-currentHost"
   end
 
+  # Array values fan out into N positional argv entries — `defaults write
+  # domain key -array v1 v2 v3` is the only correct shape. Used by the
+  # com.apple.network.local-network whitelist (RFC1918 CIDR ranges) which
+  # exempts those subnets from the macOS Sequoia/Tahoe per-app Local
+  # Network permission check.
+  def test_defaults_argv_array_value
+    entry = {
+      "domain" => "com.apple.network.local-network",
+      "key"    => "AllowedEthernetLocalNetworkAddresses",
+      "type"   => "array",
+      "value"  => ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+    }
+    assert_equal(
+      ["defaults", "write", "com.apple.network.local-network",
+       "AllowedEthernetLocalNetworkAddresses", "-array",
+       "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+      @mod.defaults_argv(entry),
+    )
+  end
+
+  def test_defaults_argv_array_value_with_sudo
+    entry = {
+      "domain" => "com.apple.network.local-network",
+      "key"    => "AllowedWiFiLocalNetworkAddresses",
+      "type"   => "array",
+      "value"  => ["10.0.0.0/8"],
+      "sudo"   => true,
+    }
+    assert_equal(
+      ["sudo", "defaults", "write", "com.apple.network.local-network",
+       "AllowedWiFiLocalNetworkAddresses", "-array", "10.0.0.0/8"],
+      @mod.defaults_argv(entry),
+    )
+  end
+
   def test_defaults_argv_current_host_entry
     entry = {
       "domain"       => "com.apple.controlcenter",
@@ -150,6 +185,41 @@ class TestMacosDefaults < Minitest::Test
       assert entry, "config/macos_defaults.yml missing SoftwareUpdate key #{key} — present keys: #{sw_keys.inspect}"
       assert_equal false, entry["value"], "SoftwareUpdate.#{key} must be false (got #{entry["value"].inspect})"
       assert_equal true,  entry["sudo"],  "SoftwareUpdate.#{key} must have sudo: true (writes /Library/Preferences)"
+    end
+  end
+
+  # Both Ethernet and WiFi sides of the per-app Local Network permission
+  # must be whitelisted for RFC1918 — without this, macOS Sequoia/Tahoe
+  # silently drops outbound packets from any app/CLI that hasn't been
+  # granted Local Network access, returning EHOSTUNREACH at sendto. This
+  # breaks SSH between local Macs, Tart VMs (bridge100), and anything
+  # else on local subnets. The fix is a system-level whitelist (sudo:true)
+  # of the three private CIDR ranges. Reboot is required to take effect.
+  REQUIRED_LOCAL_NETWORK_KEYS = %w[
+    AllowedEthernetLocalNetworkAddresses
+    AllowedWiFiLocalNetworkAddresses
+  ].freeze
+
+  REQUIRED_RFC1918_RANGES = %w[
+    10.0.0.0/8
+    172.16.0.0/12
+    192.168.0.0/16
+  ].freeze
+
+  def test_macos_defaults_config_whitelists_rfc1918_local_network
+    entries = YAML.safe_load(File.read(File.join(MacSetup::ROOT, "config/macos_defaults.yml")))
+    ln_entries = entries.select { |e| e["domain"] == "com.apple.network.local-network" }
+    ln_keys = ln_entries.map { |e| e["key"] }
+
+    REQUIRED_LOCAL_NETWORK_KEYS.each do |key|
+      entry = ln_entries.find { |e| e["key"] == key }
+      assert entry, "config/macos_defaults.yml missing Local Network key #{key} — present keys: #{ln_keys.inspect}"
+      assert_equal "array", entry["type"], "#{key} must be type:array"
+      assert_equal true, entry["sudo"], "#{key} must have sudo:true (writes /Library/Preferences)"
+      REQUIRED_RFC1918_RANGES.each do |cidr|
+        assert_includes entry["value"], cidr,
+                        "#{key} must whitelist #{cidr} (current value: #{entry["value"].inspect})"
+      end
     end
   end
 

@@ -289,6 +289,35 @@
   value: false
   sudo: true
 
+# Local Network permission whitelist — exempt RFC1918 private subnets from
+# the macOS Sequoia/Tahoe per-app Local Network permission check. Without
+# this, the kernel silently drops outbound packets from any app/CLI that
+# hasn't been granted "Local Network" access, returning EHOSTUNREACH at
+# sendto. Symptoms: ssh between local Macs fails with "No route to host",
+# Tart VMs become unreachable from host on bridge100 (192.168.64.x), pings
+# to .local IPs vanish without trace. Whitelisting RFC1918 makes the
+# permission check skip the only ranges that matter for local networking.
+# Source: https://tart.run/faq/  (the canonical fix).
+# Reboot is required for these to take effect — the kernel re-reads them
+# at boot only.
+- domain: com.apple.network.local-network
+  key: AllowedEthernetLocalNetworkAddresses
+  type: array
+  value:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  sudo: true
+
+- domain: com.apple.network.local-network
+  key: AllowedWiFiLocalNetworkAddresses
+  type: array
+  value:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  sudo: true
+
 # Keyboard / Dictation — turn off the dictation feature entirely.
 - domain: com.apple.HIToolbox
   key: AppleDictationAutoEnable
