@@ -8,8 +8,6 @@ require "yaml"
 module MacSetup
   class Tailscale < BaseModule
     CONFIG_FILE = File.join("config", "personal", "tailscale.yml")
-    TAILSCALE   = "/opt/homebrew/bin/tailscale"
-    TAILSCALED  = "/opt/homebrew/bin/tailscaled"
     CASK_APP    = "/Applications/Tailscale.app"
     OAUTH_TOKEN_URL = "https://api.tailscale.com/api/v2/oauth/token"
     OAUTH_KEY_URL   = "https://api.tailscale.com/api/v2/tailnet/-/keys"
@@ -143,7 +141,28 @@ module MacSetup
     private
 
     def formula_installed?
-      File.executable?(TAILSCALE)
+      File.executable?(tailscale_bin)
+    end
+
+    # Homebrew lives at /opt/homebrew on Apple Silicon and /usr/local on
+    # Intel. brew exports HOMEBREW_PREFIX in its shell init; outside a brew
+    # shell we fall back to checking which prefix actually exists. Defaulting
+    # to /opt/homebrew (current/native) when neither is detectable is the
+    # safer wrong answer — most modern Macs are arm64.
+    def homebrew_prefix
+      env = ENV["HOMEBREW_PREFIX"]
+      return env if env && !env.empty? && File.directory?("#{env}/bin")
+      return "/opt/homebrew" if File.directory?("/opt/homebrew/bin")
+      return "/usr/local"   if File.directory?("/usr/local/bin")
+      "/opt/homebrew"
+    end
+
+    def tailscale_bin
+      "#{homebrew_prefix}/bin/tailscale"
+    end
+
+    def tailscaled_bin
+      "#{homebrew_prefix}/bin/tailscaled"
     end
 
     def cask_installed?
@@ -173,7 +192,7 @@ module MacSetup
     end
 
     def already_connected?
-      stdout, _stderr, status = cmd.run(TAILSCALE, "status", "--json", quiet: true)
+      stdout, _stderr, status = cmd.run(tailscale_bin, "status", "--json", quiet: true)
       return false unless status.success?
       JSON.parse(stdout)["BackendState"] == "Running"
     rescue JSON::ParserError
@@ -186,7 +205,7 @@ module MacSetup
     def install_system_daemon
       return if launchdaemon_installed?
       logger.info "Installing tailscaled as system daemon..."
-      cmd.run("sudo", TAILSCALED, "install-system-daemon", abort_on_fail: true)
+      cmd.run("sudo", tailscaled_bin, "install-system-daemon", abort_on_fail: true)
     end
 
     def launchdaemon_installed?
@@ -239,7 +258,7 @@ module MacSetup
     def tailscale_up(auth_key, hostname, extra_args)
       logger.info "Running tailscale up (hostname=#{hostname})..."
       args = [
-        "sudo", TAILSCALE, "up",
+        "sudo", tailscale_bin, "up",
         "--auth-key=#{auth_key}",
         "--hostname=#{hostname}",
         "--ssh",
