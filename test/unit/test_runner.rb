@@ -37,6 +37,47 @@ class TestRunner < Minitest::Test
     assert_empty missing, "These module files are not in Runner::MODULES: #{missing.join(', ')}"
   end
 
+  # Killer regression test: any module that reads from config/personal/*
+  # MUST run after Secrets (which decrypts the archive at runtime). If a
+  # module's source references "config/personal" but sits earlier in
+  # Runner::MODULES, the file won't exist when that module runs and the
+  # personal logic silently no-ops. This exact bug went unnoticed for
+  # months in Homebrew, where `config/personal/Brewfile` was checked at
+  # MODULES idx 1 (before Secrets at idx 2) so personal package overlays
+  # never installed — the user noticed only when tailscale-app (the only
+  # entry in their personal Brewfile) was missing post-install.
+  #
+  # We grep module source files for the literal "config/personal" string
+  # because every consuming module references the path that way. Skip
+  # Secrets itself (owns the dir) and Harvester (writes outside the
+  # MODULES execution flow).
+  def test_modules_reading_personal_config_run_after_secrets
+    secrets_idx = MacSetup::Runner::MODULES.index(MacSetup::Secrets)
+    refute_nil secrets_idx, "Secrets must be registered in MODULES"
+
+    lib_dir = File.expand_path("../../lib/mac_setup", __dir__)
+    Dir["#{lib_dir}/*.rb"].each do |file|
+      basename = File.basename(file, ".rb")
+      next if %w[secrets harvester].include?(basename)
+      # Strip comments before grepping so an explanatory comment that
+      # mentions "config/personal" doesn't flag a module that actually
+      # no longer reads from the directory.
+      code_only = File.read(file).each_line.reject { |l| l.strip.start_with?("#") }.join
+      next unless code_only.match?(%r{config/personal})
+
+      class_name = basename.split("_").map(&:capitalize).join
+      next unless MacSetup.const_defined?(class_name)
+      klass = MacSetup.const_get(class_name)
+      next unless MacSetup::Runner::MODULES.include?(klass)
+
+      klass_idx = MacSetup::Runner::MODULES.index(klass)
+      assert klass_idx > secrets_idx,
+             "#{klass} reads config/personal/ (per its source) but runs at MODULES idx #{klass_idx}, " \
+             "before Secrets at idx #{secrets_idx}. config/personal/ doesn't exist on disk until " \
+             "Secrets decrypts it — this module's personal logic will silently no-op."
+    end
+  end
+
   def test_dotfiles_runs_before_claude_code
     modules = MacSetup::Runner::MODULES
     dotfiles_idx = modules.index(MacSetup::Dotfiles)

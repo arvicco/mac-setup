@@ -44,39 +44,22 @@ module MacSetup
       end
     end
 
-    # Apply core Brewfile first, then the optional personal overlay
-    # (config/personal/Brewfile — gitignored, travels inside personal.age).
-    # `brew bundle` is idempotent per package so running twice across both
-    # files is safe; the overlay just adds your per-user extras on top of
-    # the mandatory core packages.
-    #
-    # No conflict-filter here (unlike MacosDefaults.filter_personal): a
-    # Brewfile entry is a package install request, not a setting — two
-    # entries for the same package aren't a conflict, brew bundle just
-    # resolves to the installed state. MacosDefaults filters because
-    # `defaults write` IS a setting that core should own.
+    # Apply the core Brewfile. The personal overlay
+    # (config/personal/Brewfile) is installed by the separate
+    # HomebrewPersonal module, which runs AFTER Secrets has decrypted
+    # config/personal.age — Homebrew runs before Secrets (Secrets needs
+    # `age` from the core Brewfile to decrypt), so the personal file
+    # doesn't exist on disk during this step.
     def install_packages
-      core     = File.join(MacSetup::ROOT, "config", "Brewfile")
-      personal = File.join(MacSetup::ROOT, "config", "personal", "Brewfile")
-
-      applied = 0
-      if File.exist?(core)
-        logger.info "Installing packages from Brewfile (core)..."
-        # stream: true — brew bundle takes 10-20 min on a fresh Mac and
-        # any sudo prompts / per-cask failures need to surface live.
-        cmd.run(BREW_PATH, "bundle", "--file=#{core}", abort_on_fail: false, stream: true)
-        applied += 1
-      else
+      core = File.join(MacSetup::ROOT, "config", "Brewfile")
+      unless File.exist?(core)
         logger.warn "No Brewfile found at #{core}"
+        return
       end
-
-      if File.exist?(personal)
-        logger.info "Installing packages from config/personal/Brewfile (overlay)..."
-        cmd.run(BREW_PATH, "bundle", "--file=#{personal}", abort_on_fail: false, stream: true)
-        applied += 1
-      end
-
-      logger.warn "No Brewfile applied." if applied.zero?
+      logger.info "Installing packages from Brewfile (core)..."
+      # stream: true — brew bundle takes 10-20 min on a fresh Mac and
+      # any sudo prompts / per-cask failures need to surface live.
+      cmd.run(BREW_PATH, "bundle", "--file=#{core}", abort_on_fail: false, stream: true)
     end
   end
 end

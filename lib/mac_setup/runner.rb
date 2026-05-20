@@ -10,6 +10,7 @@ module MacSetup
       Hostname,
       Homebrew,
       Secrets,
+      HomebrewPersonal,
       Node,
       Dotfiles,
       ClaudeCode,
