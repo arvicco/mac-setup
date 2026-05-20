@@ -500,8 +500,8 @@ module MacSetup
       logger.info "Brewfile:"
       stdout, _, status = Open3.capture3("brew", "bundle", "dump", "--file=-")
       if status.success? && !stdout.strip.empty?
-        # config/personal/Brewfile is the live overlay — Homebrew runs
-        # `brew bundle` on it after the core Brewfile. Review + prune
+        # config/personal/Brewfile is the live overlay — HomebrewPersonal
+        # runs `brew bundle` on it after Secrets decrypts. Review + prune
         # before packing personal.age; unreviewed cruft gets installed
         # on every new Mac that decrypts this archive.
         if write_file("Brewfile", stdout, logger)
