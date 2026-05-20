@@ -8,12 +8,12 @@ Self-contained Ruby CLI that automates setting up a new MacBook. Runs on macOS s
 ### Architecture
 - `bin/setup` → `MacSetup::Runner` parses CLI args, instantiates a shared `Logger` + `CommandRunner`, then iterates `Runner::MODULES` creating each module with those dependencies and calling `#run`
 - `lib/mac_setup/base_module.rb` — base class; subclasses implement `#run`. `self.module_name` auto-derives a display name from the class name
-- `lib/mac_setup/*.rb` — individual setup modules (Hostname, Homebrew, Secrets, Node, ClaudeCode, Cask, MacosDefaults, PowerManagement, Security, Karabiner, KeyboardLayouts, KeyboardShortcuts, GitConfig, Shell, Ssh). Execution order is defined by `Runner::MODULES` in `lib/mac_setup/runner.rb` and mirrored in README.md.
+- `lib/mac_setup/*.rb` — individual setup modules. Execution order is defined by `Runner::MODULES` in `lib/mac_setup/runner.rb` (the authoritative list) and mirrored in the "Setup Steps" section of `README.md`. Don't duplicate the list here — it goes stale.
 - `lib/mac_setup/utils/file_editor.rb` — `ensure_line_in_file` / `ensure_block_in_file` helpers for idempotent shell-config edits
 - `lib/mac_setup/utils/logger.rb` — colored terminal output (`info`, `success`, `warn`, `error`)
 - `lib/mac_setup/utils/command_runner.rb` — wraps `Open3.capture3`; `run()` returns `[stdout, stderr, status]`, `success?()` returns bool
 - `config/` — declarative configuration: `Brewfile` (Homebrew bundle), `macos_defaults.yml` (YAML array of `{domain, key, type, value}`)
-- `install-gui.sh` — GUI-mode bootstrap for fresh Macs (runs on target): installs Xcode CLT, clones repo, runs `ruby bin/setup`
+- `install-gui.sh` — GUI-mode bootstrap for fresh Macs (runs on target): installs Xcode CLT and clones repo. Prints the follow-up `cd ~/mac-setup && ruby bin/setup` command for the user to run. Does *not* run `bin/setup` itself.
 - `install-ssh-controller.sh` — SSH-mode bootstrap (runs on a controller Mac): installs pubkey/NOPASSWD sudo/CLT on target, rsyncs repo, runs `ruby bin/setup --all` over SSH
 - `install-ssh-target.sh` — SSH-mode finishing touches (runs on target after login): default browser, SSH keychain, Finder/Dock restart
 - `MacSetup::ROOT` (defined in `lib/mac_setup.rb`) — absolute path to repo root, used by modules to resolve config files

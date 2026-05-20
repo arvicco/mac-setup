@@ -14,6 +14,20 @@ Apple's license caps you at 2 concurrent macOS guest VMs per host. Fine for our 
 brew install cirruslabs/cli/tart
 ```
 
+### Allow host → VM traffic on bridge100 (critical on macOS Sequoia/Tahoe)
+
+Starting in macOS 15 (Sequoia) and tightened in macOS 26 (Tahoe), the kernel enforces a per-app **Local Network** permission check on outbound packets to RFC1918 ranges — including Tart's bridge100 subnet (192.168.64.0/24). Without an exemption, your host's `ssh`/`ping`/`rsync` to a Tart guest fail with `EHOSTUNREACH` and zero packets reach `bridge100` (verifiable via `tcpdump -i bridge100`). `rake test:vm` hangs at `Waiting for SSH on …` and times out.
+
+If you've already run mac-setup on this host (v0.10.0+), it wrote the fix into `/Library/Preferences/com.apple.network.local-network.plist` automatically — just reboot once for the kernel to read it. If not, apply manually then reboot:
+
+```bash
+sudo defaults write com.apple.network.local-network AllowedEthernetLocalNetworkAddresses -array "10.0.0.0/8" "172.16.0.0/12" "192.168.0.0/16"
+sudo defaults write com.apple.network.local-network AllowedWiFiLocalNetworkAddresses -array "10.0.0.0/8" "172.16.0.0/12" "192.168.0.0/16"
+sudo reboot
+```
+
+Reference: <https://tart.run/faq/#local-network-permission-pop-up-on-macos-15>
+
 ### Shorten DHCP lease time (important)
 
 macOS's built-in DHCP server (used by Tart's default NAT networking) hands out 1-hour leases from a pool of 253 addresses. Cloning and destroying many short-lived VMs exhausts the pool. Drop the lease to 10 minutes:

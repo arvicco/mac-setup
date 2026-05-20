@@ -31,7 +31,7 @@ curl -fsSL https://tinyurl.com/278326ts | bash
 curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.sh | bash
 ```
 
-`install-gui.sh` installs Xcode Command Line Tools, clones the repo to `~/mac-setup`, then runs `ruby bin/setup`. You'll be prompted to pick modules, enter a hostname, and enter git identity. GUI dialogs (CLT install, Gatekeeper) appear and you click through.
+`install-gui.sh` installs Xcode Command Line Tools and clones the repo to `~/mac-setup` (or `git pull --ff-only`s an existing checkout). When it's done it prints the follow-up command (`cd ~/mac-setup && ruby bin/setup`) — you run that yourself. GUI dialogs (CLT install, Gatekeeper) appear during the CLT step and you click through.
 
 ### Manual
 
@@ -76,10 +76,16 @@ From your controller Mac (with this repo checked out):
 ```bash
 cd ~/mac-setup
 ./install-ssh-controller.sh <target-ip> \
+  --ssh-user admin \
   --hostname my-new-mac \
   --git-name "Jane Doe" \
-  --git-email jane@example.com
+  --git-email jane@example.com \
+  --cleanup-secrets
 ```
+
+`--ssh-user` defaults to `admin`; override if the first-boot wizard created a different account. `--cleanup-secrets` is recommended for one-shot bootstraps — removes the decrypted `config/personal/` on the target after a successful run (otherwise plaintext `gh_token`, tailscale OAuth secret, and autologin password sit on disk).
+
+For secrets, prepend `AGE_PASSPHRASE='...'` to the command (not visible in `ps`) — see [docs/personal-config.md](personal-config.md#ssh-mode).
 
 The script:
 
@@ -137,6 +143,8 @@ A handful of macOS operations require the user's active GUI session and can't be
 
 After both scripts run, complete the manual checklist in the [README](../README.md#manual-steps-after-setup) — permissions for Karabiner, iCloud sign-in, browser profiles, etc.
 
+**Reboot the target once after setup completes.** The v0.10.0+ Local Network permission whitelist (`com.apple.network.local-network`) is written by `bin/setup` but the macOS Sequoia/Tahoe kernel only reads it at boot. Until reboot, the target may silently fail to receive traffic from other local Macs (including the controller). `ssh admin@<target-ip> sudo reboot` from the controller does it. For a server with `--autologin`, the target comes back unattended.
+
 ---
 
 ## Testing changes before running on a real Mac
@@ -166,13 +174,20 @@ curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.
 **SSH mode — from controller (after Remote Login enabled on target):**
 ```bash
 cd ~/mac-setup
-./install-ssh-controller.sh <target-ip> \
+AGE_PASSPHRASE='your-passphrase' ./install-ssh-controller.sh <target-ip> \
+  --ssh-user admin \
   --hostname my-mac \
   --git-name "Jane Doe" \
-  --git-email jane@example.com
+  --git-email jane@example.com \
+  --cleanup-secrets
 ```
 
 Then on the target's Terminal after GUI login:
 ```bash
 cd ~/mac-setup && ./install-ssh-target.sh
+```
+
+After that, **reboot the target** so the Local Network whitelist (v0.10.0+) takes effect:
+```bash
+ssh admin@<target-ip> sudo reboot
 ```

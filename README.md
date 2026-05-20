@@ -16,7 +16,7 @@ curl -fsSL https://tinyurl.com/278326ts | bash
 curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.sh | bash
 ```
 
-`install-gui.sh` installs Xcode CLT, clones the repo to `~/mac-setup`, then runs `ruby bin/setup`.
+`install-gui.sh` installs Xcode CLT and clones the repo to `~/mac-setup` (or `git pull --ff-only`s an existing checkout). When it's done it prints the follow-up command — `cd ~/mac-setup && ruby bin/setup` — for you to run. See [Manual Usage](#manual-usage) below for the full flag set.
 
 ### SSH mode — run from a controller Mac
 
@@ -132,6 +132,9 @@ sudo rm /etc/sudoers.d/mac-setup-*
 ## Manual steps after setup
 
 Some macOS security restrictions require manual interaction — these can't be scripted. Complete them once after the setup finishes.
+
+**⚠ Reboot first (mandatory for v0.10.0+ Local Network whitelist):**
+- [ ] `sudo reboot`. The `com.apple.network.local-network` whitelist defaults are written by `bin/setup` but the kernel only reads them at boot. Until you reboot, host→Tart-VM bridge100 traffic and ssh to other local Macs may silently fail with `EHOSTUNREACH`. For headless servers (auto-login + tailscaled-as-LaunchDaemon) the box comes back unattended.
 
 **Permissions (required for installed tools to work):**
 - [ ] **Karabiner-Elements** — open the app, then grant permissions in System Settings → Privacy & Security:

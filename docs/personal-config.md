@@ -40,26 +40,31 @@ This collects dotfiles, git identity, SSH config, gh token, Claude Code config, 
 Output:
 ```
 config/personal/
-├── dotfiles/          ← .zshrc, .vimrc, .tmux.conf, etc.
-├── git_identity.yml   ← git name/email
-├── ssh_config         ← ~/.ssh/config
-├── known_hosts        ← ~/.ssh/known_hosts
-├── gh_token           ← GitHub CLI token
-├── claude/            ← Claude Code settings
-├── macos_defaults_discovered.yml  ← for review, merge into config/macos_defaults.yml
-├── Brewfile.discovered            ← for review, merge into config/Brewfile
-└── keyboard_remapping.json        ← for review
+├── dotfiles/                ← .zshrc, .vimrc, .tmux.conf, etc.
+├── git_identity.yml         ← git name/email
+├── ssh_config               ← ~/.ssh/config
+├── known_hosts              ← ~/.ssh/known_hosts
+├── gh_token                 ← GitHub CLI token
+├── claude/                  ← Claude Code settings
+├── macos_defaults.yml       ← personal overlay applied after core; core wins on conflicts
+├── Brewfile                 ← personal overlay applied after core
+├── tailscale.yml            ← Tailscale OAuth creds (template; fill in real values)
+├── autologin.yml            ← username + password (only used when `--autologin` is passed)
+├── dotfiles.yml             ← template with `repo: REPLACE_ME` (set to skip Dotfiles module)
+└── keyboard_remapping.json  ← hidutil mappings, for manual review only
 ```
 
 ### 2. Review and curate
 
 The harvested files are a raw snapshot. Review before packing:
 
-- **macos_defaults_discovered.yml** — cherry-pick entries into `config/macos_defaults.yml`
-- **Brewfile.discovered** — cherry-pick entries into `config/Brewfile`
-- **dotfiles/** — remove anything machine-specific (hardcoded paths, temp aliases)
-- **gh_token** — verify this is the right token / account
-- **keyboard_remapping.json** — if present, note the hidutil mappings for a future module
+- **macos_defaults.yml** — pruned to only your machine-specific extras; **don't** duplicate entries that already live in core `config/macos_defaults.yml`. Personal entries whose `(domain, key, current_host)` matches a core entry are dropped at apply time anyway ("core wins"). Keeping personal lean makes intent obvious.
+- **Brewfile** — pruned to only the packages/casks not in core `config/Brewfile`. For Tailscale, pick **exactly one** of `brew "tailscale"` (headless server) or `cask "tailscale-app"` (admin workstation) — running both registers the Mac twice in your tailnet and v0.9.0+ hard-errors on the conflict.
+- **dotfiles/** — remove anything machine-specific (hardcoded paths, temp aliases).
+- **tailscale.yml** — fill in `oauth_client_id` / `oauth_client_secret` (template ships with `REPLACE_ME`); list at least one ACL tag.
+- **autologin.yml** — only useful if the target should have boot-time auto-login; delete it otherwise (the AutoLogin module is also gated on `--autologin` so the file alone doesn't trigger anything).
+- **gh_token** — verify this is the right token / account.
+- **keyboard_remapping.json** — manual-review hint; no module reads it yet.
 
 ### 3. Add your own files
 
@@ -131,18 +136,26 @@ Preferred — pass via env var (not visible in `ps` output):
 
 ```bash
 AGE_PASSPHRASE="your-passphrase" ./install-ssh-controller.sh <target-ip> \
-  --hostname my-mac
+  --ssh-user admin \
+  --hostname my-mac \
+  --git-name "Your Name" \
+  --git-email you@example.com \
+  --cleanup-secrets
 ```
 
 Or via CLI flag (visible in `ps` briefly — use only when env var isn't practical):
 
 ```bash
 ./install-ssh-controller.sh <target-ip> \
+  --ssh-user admin \
   --hostname my-mac \
-  --passphrase "your-passphrase"
+  --passphrase "your-passphrase" \
+  --cleanup-secrets
 ```
 
 Priority: `--passphrase` flag > `AGE_PASSPHRASE` env var > interactive prompt.
+
+`--ssh-user` defaults to `admin`; override if the first-boot wizard created a different account. `--cleanup-secrets` is recommended for one-shot bootstraps so the decrypted `config/personal/` is removed on the target after a successful run.
 
 ---
 
