@@ -31,7 +31,7 @@ curl -fsSL https://tinyurl.com/278326ts | bash
 curl -fsSL https://raw.githubusercontent.com/arvicco/mac-setup/main/install-gui.sh | bash
 ```
 
-`install-gui.sh` installs Xcode Command Line Tools and clones the repo to `~/mac-setup` (or `git pull --ff-only`s an existing checkout). When it's done it prints the follow-up command (`cd ~/mac-setup && ruby bin/setup`) — you run that yourself. GUI dialogs (CLT install, Gatekeeper) appear during the CLT step and you click through.
+`install-gui.sh` installs Xcode Command Line Tools and clones the repo to `~/mac-setup` (or `git pull --ff-only`s an existing checkout). When it's done it prints a prefilled `ruby bin/setup --all` one-liner with hostname / git-identity placeholders and `--cleanup-secrets` — edit the placeholders and run it. GUI dialogs (CLT install, Gatekeeper) appear during the CLT step and you click through.
 
 ### Manual
 

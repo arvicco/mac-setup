@@ -32,11 +32,11 @@ fi
 
 # 3. Done — print next steps
 echo ""
-echo "==> Ready! Now run:"
+echo "==> Ready! Now run (edit the placeholders first):"
 echo ""
-echo "    cd ~/mac-setup && ruby bin/setup"
+echo "    cd ~/mac-setup"
+echo "    ruby bin/setup --all --hostname new-box-name --git-name \"Your Name\" --git-email you@example.com --cleanup-secrets"
 echo ""
-echo "    Options:"
-echo "      ruby bin/setup --all    # run all modules without prompting"
-echo "      ruby bin/setup --list   # list available modules"
+echo "    Add --autologin if this is a server (boot-time auto-login)."
+echo "    Full flag list: ruby bin/setup --help"
 echo ""
