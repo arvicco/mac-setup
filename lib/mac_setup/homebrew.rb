@@ -4,6 +4,13 @@ module MacSetup
   class Homebrew < BaseModule
     BREW_INSTALL_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
     BREW_PATH = "/opt/homebrew/bin/brew"
+    # brew's `ruby` formula is keg-only — macOS already ships /usr/bin/ruby
+    # so brew refuses to link its build into /opt/homebrew/bin. The actual
+    # binary lives at the keg path below, and `brew shellenv` does NOT add
+    # this to PATH. Without an explicit export, `ruby` / `gem` / `bundle`
+    # / `irb` all keep resolving to Apple's stock 2.6.10 (deprecated since
+    # Sonoma, deprecation warning on every invocation).
+    RUBY_KEG_BIN = "/opt/homebrew/opt/ruby/bin"
 
     def run
       install_homebrew unless homebrew_installed?
@@ -41,6 +48,19 @@ module MacSetup
       shellenv_line = 'eval "$(/opt/homebrew/bin/brew shellenv)"'
       if Utils::FileEditor.ensure_line_in_file("~/.zprofile", shellenv_line)
         logger.info "Added brew shellenv to ~/.zprofile."
+      end
+
+      # Keg-only ruby (see RUBY_KEG_BIN comment). Prepended to PATH so any
+      # subsequent module that invokes `ruby` / `gem` / `bundle` sees the
+      # brew binary, not Apple's deprecated stock 2.6.10.
+      unless ENV["PATH"].include?(RUBY_KEG_BIN)
+        ENV["PATH"] = "#{RUBY_KEG_BIN}:#{ENV['PATH']}"
+        logger.info "Added #{RUBY_KEG_BIN} to PATH for this session (keg-only ruby)."
+      end
+
+      ruby_path_line = %(export PATH="#{RUBY_KEG_BIN}:$PATH")
+      if Utils::FileEditor.ensure_line_in_file("~/.zprofile", ruby_path_line)
+        logger.info "Added keg-only ruby to PATH in ~/.zprofile."
       end
     end
 

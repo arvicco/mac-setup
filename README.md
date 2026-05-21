@@ -102,7 +102,7 @@ sudo rm /etc/sudoers.d/mac-setup-*
 ## Setup Steps (in execution order)
 
 1. **Hostname** — Prompts for a machine name and sets HostName, ComputerName, and LocalHostName via `scutil`
-2. **Homebrew** — Installs Homebrew (if missing) and all packages from `config/Brewfile` (core only — personal overlay is a separate step after Secrets)
+2. **Homebrew** — Installs Homebrew (if missing) and all packages from `config/Brewfile` (core only — personal overlay is a separate step after Secrets). Also adds keg-only `ruby` to PATH (`/opt/homebrew/opt/ruby/bin` — Apple ships ruby at `/usr/bin/ruby` so `brew shellenv` won't link the brew build, and without this `ruby` / `gem` / `bundle` keep resolving to Apple's deprecated stock 2.6.10).
 3. **Secrets** — Decrypts `config/personal.age` → `config/personal/` using `age`. Skips if no `.age` file or already decrypted.
 4. **Homebrew Personal** — Runs `brew bundle --file=config/personal/Brewfile` if the personal overlay exists. Split from step 2 because the personal Brewfile lives inside `config/personal.age` and isn't on disk until Secrets has decrypted (step 3). Skipped silently if no personal Brewfile is present.
 5. **Node** — Installs nvm and Node.js LTS
