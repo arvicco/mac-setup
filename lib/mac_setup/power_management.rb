@@ -6,6 +6,7 @@ module MacSetup
       disable_low_power_mode
       prevent_sleep_on_ac
       prevent_sleep_on_battery
+      disable_all_sleep
       auto_restart_after_outage
       wake_on_network
     end
@@ -28,6 +29,16 @@ module MacSetup
       logger.info "Preventing auto-sleep on battery power (ride-through on outage)..."
       cmd.run("sudo", "pmset", "-b", "sleep", "0")
       cmd.run("sudo", "pmset", "-b", "disksleep", "0")
+    end
+
+    # `pmset -a sleep 0` only zeros the inactivity timer. The machine still
+    # sleeps on lid close (clamshell), on emergency low battery (~3%), and
+    # on any IOPMAssertion-based sleep request from an app. For a home
+    # server we want NONE of those — this is the kernel-level master
+    # switch that disables all of them at once.
+    def disable_all_sleep
+      logger.info "Disabling all sleep paths (lid close, low battery, app requests)..."
+      cmd.run("sudo", "pmset", "-a", "disablesleep", "1")
     end
 
     # When AC returns after a power outage, boot automatically. Essential
