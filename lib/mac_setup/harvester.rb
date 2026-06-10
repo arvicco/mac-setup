@@ -204,20 +204,40 @@ module MacSetup
           next
         end
 
-        dest = File.join(output_dir, "dotfiles", name)
+        dest_rel = "dotfiles/#{name}"
+        dest = File.join(output_dir, dest_rel)
         if File.exist?(dest) && !@options[:force]
           logger.warn "  dotfiles/#{name}/ already exists (use --force to overwrite)"
           next
         end
-        FileUtils.rm_rf(dest) if File.exist?(dest)
-        FileUtils.mkdir_p(File.dirname(dest))
-        FileUtils.cp_r(src, dest)
+        copy_dotdir_tree(src, dest_rel)
         logger.info "  + ~/#{name}/"
         found += 1
       end
       logger.info "  (#{found} directories collected)" if found > 0
       logger.info "  (none found)" if found == 0
       logger.info ""
+    end
+
+    # Mirror a directory tree into the harvest output, dropping .DS_Store
+    # entries as we go. Finder metadata files have no business shipping
+    # inside the encrypted personal archive — they're per-machine cruft
+    # that re-grows on every harvest and bloats the tarball for nothing.
+    def copy_dotdir_tree(src, dest_relative)
+      dest = File.join(output_dir, dest_relative)
+      FileUtils.rm_rf(dest) if File.exist?(dest)
+      FileUtils.mkdir_p(dest)
+      Dir.glob("**/*", File::FNM_DOTMATCH, base: src).each do |rel|
+        next if [".", "..", ".DS_Store"].include?(File.basename(rel))
+        full_src = File.join(src, rel)
+        full_dest = File.join(dest, rel)
+        if File.directory?(full_src)
+          FileUtils.mkdir_p(full_dest)
+        else
+          FileUtils.mkdir_p(File.dirname(full_dest))
+          FileUtils.cp(full_src, full_dest)
+        end
+      end
     end
 
     # ---------------------------------------------------------------- Git

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "tmpdir"
+require "fileutils"
 
 class TestHarvester < Minitest::Test
   def setup
@@ -48,5 +50,26 @@ class TestHarvester < Minitest::Test
     # rather than raising. New types can be added to the YAML format
     # without breaking the harvester.
     assert_equal "whatever", @h.send(:coerce_value, "whatever", "array-of-strings")
+  end
+
+  # .DS_Store files are macOS Finder metadata and have no business
+  # traveling inside the encrypted personal archive. Without this
+  # filter, every harvested dotdir picks up the user's Finder cruft
+  # and the tarball grows for no reason on every re-harvest.
+  def test_copy_dotdir_skips_DS_Store
+    Dir.mktmpdir do |dir|
+      src = File.join(dir, "src")
+      FileUtils.mkdir_p(src)
+      File.write(File.join(src, ".DS_Store"), "binary-cruft")
+      File.write(File.join(src, "real_file"), "useful")
+      out_dir = File.join(dir, "out")
+
+      @h.instance_variable_set(:@output_dir, out_dir)
+      @h.send(:copy_dotdir_tree, src, "dotfiles/.config/x")
+
+      assert File.exist?(File.join(out_dir, "dotfiles/.config/x/real_file"))
+      refute File.exist?(File.join(out_dir, "dotfiles/.config/x/.DS_Store")),
+             ".DS_Store must NOT be copied into the harvest"
+    end
   end
 end
