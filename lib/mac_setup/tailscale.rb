@@ -125,7 +125,9 @@ module MacSetup
     ensure
       # Make sure the fresh key doesn't linger in memory longer than
       # necessary. tailscale up consumes single-use keys; best-effort.
-      auth_key.clear if defined?(auth_key) && auth_key.is_a?(String)
+      # `defined?(local_var)` is parser-truthy once the name appears in
+      # source, so it's not a real guard — `is_a?(String)` covers nil.
+      auth_key.clear if auth_key.is_a?(String)
     end
 
     # Return the keys whose value is missing, blank, or still the
