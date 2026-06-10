@@ -150,30 +150,14 @@ class TestTailscale < Minitest::Test
     refute_match(/orphan/i, @log_io.string)
   end
 
-  # Homebrew lives at /opt/homebrew on Apple Silicon and /usr/local on Intel.
-  # The module must derive paths from a detected prefix, otherwise an
-  # Intel-Mac user with a perfectly working `brew install tailscale` looks
-  # uninstalled to mac-setup (formula_installed? returns false) AND
-  # install_system_daemon would later exec the wrong path and fail.
-  def test_tailscale_bin_uses_intel_prefix
-    @mod.define_singleton_method(:homebrew_prefix) { "/usr/local" }
-    assert_equal "/usr/local/bin/tailscale",  @mod.send(:tailscale_bin)
-    assert_equal "/usr/local/bin/tailscaled", @mod.send(:tailscaled_bin)
-  end
-
-  def test_tailscale_bin_uses_apple_silicon_prefix
-    @mod.define_singleton_method(:homebrew_prefix) { "/opt/homebrew" }
+  # Apple-Silicon only by policy — paths derive from Homebrew::PREFIX.
+  # Tailscale used to do runtime prefix detection ("safer wrong answer"
+  # fallback); the rest of the codebase always hard-coded /opt/homebrew,
+  # so the asymmetry was confusing without buying anything real. If
+  # Intel comes back, fix Homebrew::PREFIX once.
+  def test_tailscale_bin_resolves_via_homebrew_helper
     assert_equal "/opt/homebrew/bin/tailscale",  @mod.send(:tailscale_bin)
     assert_equal "/opt/homebrew/bin/tailscaled", @mod.send(:tailscaled_bin)
-  end
-
-  # Real-system detection: at minimum, return a non-empty path that ends
-  # in either /opt/homebrew or /usr/local. Don't pin to one because the
-  # test runs on whichever architecture is actually present.
-  def test_homebrew_prefix_returns_a_known_layout
-    prefix = @mod.send(:homebrew_prefix)
-    assert %w[/opt/homebrew /usr/local].include?(prefix),
-           "homebrew_prefix returned #{prefix.inspect}, expected /opt/homebrew or /usr/local"
   end
 
   # extension_loaded? is a best-effort probe: if systemextensionsctl

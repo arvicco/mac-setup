@@ -5,7 +5,7 @@ require "yaml"
 module MacSetup
   class Dock < BaseModule
     CONFIG_FILE = File.join("config", "dock.yml")
-    DOCKUTIL = "/opt/homebrew/bin/dockutil"
+    DOCKUTIL = Homebrew.bin("dockutil")
 
     def run
       config_path = File.join(MacSetup::ROOT, CONFIG_FILE)

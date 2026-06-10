@@ -146,25 +146,15 @@ module MacSetup
       File.executable?(tailscale_bin)
     end
 
-    # Homebrew lives at /opt/homebrew on Apple Silicon and /usr/local on
-    # Intel. brew exports HOMEBREW_PREFIX in its shell init; outside a brew
-    # shell we fall back to checking which prefix actually exists. Defaulting
-    # to /opt/homebrew (current/native) when neither is detectable is the
-    # safer wrong answer — most modern Macs are arm64.
-    def homebrew_prefix
-      env = ENV["HOMEBREW_PREFIX"]
-      return env if env && !env.empty? && File.directory?("#{env}/bin")
-      return "/opt/homebrew" if File.directory?("/opt/homebrew/bin")
-      return "/usr/local"   if File.directory?("/usr/local/bin")
-      "/opt/homebrew"
-    end
-
+    # Apple-Silicon only by policy — paths derive from Homebrew::PREFIX.
+    # See Homebrew.bin helper for the canonical pattern; if Intel ever
+    # comes back, fix it there once instead of here.
     def tailscale_bin
-      "#{homebrew_prefix}/bin/tailscale"
+      Homebrew.bin("tailscale")
     end
 
     def tailscaled_bin
-      "#{homebrew_prefix}/bin/tailscaled"
+      Homebrew.bin("tailscaled")
     end
 
     def cask_installed?

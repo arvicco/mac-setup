@@ -2,15 +2,27 @@
 
 module MacSetup
   class Homebrew < BaseModule
+    # Apple-Silicon only by policy (see CLAUDE.md / past discussion). All
+    # paths derive from this constant so the rest of the codebase doesn't
+    # need to hard-code anything. If Intel support is ever revisited, this
+    # is the one place that has to grow runtime detection.
+    PREFIX = "/opt/homebrew"
     BREW_INSTALL_URL = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-    BREW_PATH = "/opt/homebrew/bin/brew"
+    BREW_PATH = "#{PREFIX}/bin/brew"
     # brew's `ruby` formula is keg-only — macOS already ships /usr/bin/ruby
     # so brew refuses to link its build into /opt/homebrew/bin. The actual
     # binary lives at the keg path below, and `brew shellenv` does NOT add
     # this to PATH. Without an explicit export, `ruby` / `gem` / `bundle`
     # / `irb` all keep resolving to Apple's stock 2.6.10 (deprecated since
     # Sonoma, deprecation warning on every invocation).
-    RUBY_KEG_BIN = "/opt/homebrew/opt/ruby/bin"
+    RUBY_KEG_BIN = "#{PREFIX}/opt/ruby/bin"
+
+    # Helper for other modules: absolute path to a brew-installed binary
+    # without each module having to remember the /opt/homebrew prefix or
+    # the bin/ subdir. Used by Dock, Cask/DefaultBrowser, Tailscale.
+    def self.bin(name)
+      "#{PREFIX}/bin/#{name}"
+    end
 
     def run
       install_homebrew unless homebrew_installed?
