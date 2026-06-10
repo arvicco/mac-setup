@@ -72,4 +72,45 @@ class TestHarvester < Minitest::Test
              ".DS_Store must NOT be copied into the harvest"
     end
   end
+
+  # stow / chezmoi setups frequently have ~/.config/nvim → ~/dotfiles/nvim
+  # as a symlink-to-directory. Following it would (a) silently drop the
+  # linked content (Dir.glob doesn't descend through symlinks), and (b)
+  # pull out-of-tree files into the encrypted archive. Preserve the link.
+  def test_copy_dotdir_preserves_symlinks_to_directories
+    Dir.mktmpdir do |dir|
+      target = File.join(dir, "target")
+      FileUtils.mkdir_p(target)
+      File.write(File.join(target, "real"), "content")
+      src = File.join(dir, "src")
+      FileUtils.mkdir_p(src)
+      File.symlink(target, File.join(src, "linked_dir"))
+      out_dir = File.join(dir, "out")
+
+      @h.instance_variable_set(:@output_dir, out_dir)
+      @h.send(:copy_dotdir_tree, src, "dotfiles/.config/x")
+
+      link_dest = File.join(out_dir, "dotfiles/.config/x/linked_dir")
+      assert File.symlink?(link_dest), "symlink-to-dir must be preserved as a symlink"
+      assert_equal target, File.readlink(link_dest)
+    end
+  end
+
+  def test_copy_dotdir_preserves_symlinks_to_files
+    Dir.mktmpdir do |dir|
+      target = File.join(dir, "target_file")
+      File.write(target, "real content")
+      src = File.join(dir, "src")
+      FileUtils.mkdir_p(src)
+      File.symlink(target, File.join(src, "linked_file"))
+      out_dir = File.join(dir, "out")
+
+      @h.instance_variable_set(:@output_dir, out_dir)
+      @h.send(:copy_dotdir_tree, src, "dotfiles/.config/x")
+
+      link_dest = File.join(out_dir, "dotfiles/.config/x/linked_file")
+      assert File.symlink?(link_dest), "symlink-to-file must be preserved as a symlink"
+      assert_equal target, File.readlink(link_dest)
+    end
+  end
 end

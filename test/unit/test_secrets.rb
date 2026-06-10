@@ -245,6 +245,29 @@ class TestSecrets < Minitest::Test
     end
   end
 
+  # BLOCKER fix: rotate-to-one must also run on the up_to_date short
+  # circuit. Without it, the steady-state path (archive unchanged
+  # between runs) leaves stale backups from prior decrypts on disk
+  # forever, silently violating the rotate-to-one contract.
+  def test_run_rotates_backups_on_up_to_date_path
+    with_tmp_paths do |enc, dec|
+      parent = File.dirname(dec)
+      FileUtils.mkdir_p(dec)
+      File.write(File.join(dec, ".age-source-sha256"), Digest::SHA256.file(enc).hexdigest)
+
+      stale_old = File.join(parent, "personal.bak-20260101-000000")
+      stale_mid = File.join(parent, "personal.bak-20260201-000000")
+      newest    = File.join(parent, "personal.bak-20260301-000000")
+      [stale_old, stale_mid, newest].each { |p| FileUtils.mkdir_p(p) }
+
+      capture_io { @mod.run }
+
+      refute File.exist?(stale_old), "older bak pruned on up-to-date path"
+      refute File.exist?(stale_mid), "middle bak pruned on up-to-date path"
+      assert File.directory?(newest), "newest bak kept as one-cycle undo"
+    end
+  end
+
   def test_rotate_backups_does_not_touch_unrelated_siblings
     with_tmp_paths do |_, dec|
       parent = File.dirname(dec)

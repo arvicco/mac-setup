@@ -86,12 +86,29 @@ class TestCommandRunner < Minitest::Test
     log = log_io.string
     # Security property: the real secret never reaches the log, the
     # redacted marker does, and the surrounding args are still echoed.
-    # The line is Shellwords-escaped so `=` and `<>` show up backslashed
-    # — that's fine, we just need the strings recognizable.
     refute_includes log, "SECRET",  "secret value must not appear in log"
-    assert_match(/--auth-key/, log)
-    assert_match(/redacted/i,  log)
-    assert_match(/rest/,       log, "non-matching args must echo verbatim")
+    refute_includes log, "tskey",   "secret prefix must not appear either"
+    assert_match(/redacted/i, log)
+    assert_match(/rest/,      log, "non-matching args must echo verbatim")
+  end
+
+  # Foot-gun guard: a regex that matches the secret value alone (no
+  # prefix anchor) must NOT echo the matched substring. The earlier
+  # design appended <redacted> to m[0] — caller-supplied
+  # /tskey-[a-z0-9]+/ would have leaked the whole secret. Whole-arg
+  # replacement is the safer default.
+  def test_redact_whole_arg_replacement_for_value_matching_regex
+    log_io = StringIO.new
+    logger = MacSetup::Utils::Logger.new(log_file: log_io)
+    runner = MacSetup::Utils::CommandRunner.new(logger: logger)
+    capture_io do
+      runner.run("echo", "tskey-SECRETVALUE",
+                 redact: [/tskey-[A-Z0-9]+/])
+    end
+    log = log_io.string
+    refute_includes log, "SECRETVALUE"
+    refute_includes log, "tskey-"
+    assert_match(/redacted/, log)
   end
 
   def test_redact_does_not_affect_actual_command_execution
@@ -114,5 +131,24 @@ class TestCommandRunner < Minitest::Test
                  redact: [/\A--auth-key=/], quiet: true)
     end
     assert_equal "", log_io.string
+  end
+
+  # Failure path: tools like `tailscale up` can echo the offending
+  # token back in their error output. The redact: option must scrub
+  # stderr before it's emitted to the log, otherwise a failed run
+  # leaks the secret to log/setup-*.log even though argv was hidden.
+  def test_redact_scrubs_stderr_on_failure
+    log_io = StringIO.new
+    logger = MacSetup::Utils::Logger.new(log_file: log_io)
+    runner = MacSetup::Utils::CommandRunner.new(logger: logger)
+    # `sh -c 'echo "leak: tskey-SECRET" >&2; exit 1'` — produce the
+    # secret on stderr and exit non-zero so the error path fires.
+    capture_io do
+      runner.run("sh", "-c", "echo 'leak: tskey-SECRET' >&2; exit 1",
+                 redact: [/tskey-[A-Z0-9]+/])
+    end
+    refute_includes log_io.string, "tskey-SECRET",
+                    "stderr scrub must remove the secret before logging"
+    assert_match(/redacted/, log_io.string)
   end
 end

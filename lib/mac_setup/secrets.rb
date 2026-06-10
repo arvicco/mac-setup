@@ -18,6 +18,13 @@ module MacSetup
 
       if up_to_date?
         logger.info "config/personal/ already decrypted from current config/personal.age; skipping."
+        # Rotate-to-one applies even when we didn't decrypt this run:
+        # any leftover personal.bak-* from a prior decrypt is stale
+        # plaintext, and the contract is "at most one undo backup on
+        # disk." Pick the newest as the keep target; everything older
+        # is pruned. Without this, the steady-state up-to-date path
+        # silently violates the rotate-to-one invariant.
+        rotate_backups(keep: newest_bak_dir)
         return
       end
 
@@ -108,20 +115,30 @@ module MacSetup
     end
 
     # Rotate-to-one: keep the freshest backup as a one-cycle undo, prune
-    # everything older. Called only after the new tree is on disk and
-    # stamped — stage-before-destroy per CLAUDE.md atomic-actions rule.
-    # `keep:` is the path produced by this run's backup_existing_personal
-    # (nil when nothing was backed up, in which case we still prune any
-    # stale backups left by prior runs).
+    # everything older. Called after a successful decrypt (with the
+    # current run's backup as `keep:`) AND on the up_to_date short
+    # circuit (with the newest existing bak as `keep:`) so the invariant
+    # holds regardless of which path the run takes. Stage-before-destroy
+    # per CLAUDE.md atomic-actions rule.
     def rotate_backups(keep:)
-      parent = File.dirname(decrypted_path)
-      pattern = File.join(parent, "#{File.basename(decrypted_path)}.bak-*")
-      Dir.glob(pattern).each do |path|
-        next unless File.directory?(path)
+      bak_dirs.each do |path|
         next if path == keep
         FileUtils.rm_rf(path)
         logger.info "Pruned stale backup #{File.basename(path)}."
       end
+    end
+
+    def bak_dirs
+      parent = File.dirname(decrypted_path)
+      pattern = File.join(parent, "#{File.basename(decrypted_path)}.bak-*")
+      Dir.glob(pattern).select { |p| File.directory?(p) }
+    end
+
+    # The .bak-YYYYMMDD-HHMMSS suffix is lexicographically chronological,
+    # so the max-by-path is the newest. Returns nil when no bak dirs
+    # exist (in which case rotate_backups still runs but prunes nothing).
+    def newest_bak_dir
+      bak_dirs.max
     end
 
     # Drop a SHA256 of the source archive inside the decrypted dir so

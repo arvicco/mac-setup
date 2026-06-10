@@ -52,11 +52,11 @@ module MacSetup
         unless status.success?
           if abort_on_fail
             logger.error "Command failed (exit #{status.exitstatus}): #{display(args, redact)}"
-            logger.error stderr unless stderr.empty?
+            logger.error scrub(stderr, redact) unless stderr.empty?
             exit 1
           elsif !quiet
             logger.error "Command failed (exit #{status.exitstatus}): #{display(args, redact)}"
-            logger.error stderr unless stderr.empty?
+            logger.error scrub(stderr, redact) unless stderr.empty?
           end
         end
 
@@ -76,14 +76,25 @@ module MacSetup
         rendered.length == 1 ? rendered.first : Shellwords.join(rendered)
       end
 
+      # Whole-arg replacement is the safe default: a regex like
+      # /tskey-[a-z0-9]+/ that matches the secret value alone would
+      # otherwise echo the secret followed by "<redacted>" (m[0] is the
+      # match). Replacing the entire arg means callers can't shoot
+      # themselves regardless of how their regex anchors.
       def redact_arg(arg, patterns)
         return arg if patterns.empty?
-        patterns.each do |re|
-          if (m = arg.match(re))
-            return "#{m[0]}<redacted>"
-          end
-        end
+        return "<redacted>" if patterns.any? { |re| arg.match?(re) }
         arg
+      end
+
+      # Scrub captured stderr/stdout for any matched substring before
+      # emitting it to the log. Without this, `tailscale up` could echo
+      # the auth-key back in its validation error, defeating the redact:
+      # option's intent on the failure path. Per-line scan so the rest
+      # of the message stays useful for triage.
+      def scrub(text, patterns)
+        return text if patterns.empty?
+        patterns.reduce(text) { |t, re| t.gsub(re, "<redacted>") }
       end
     end
   end

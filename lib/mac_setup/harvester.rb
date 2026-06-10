@@ -223,6 +223,13 @@ module MacSetup
     # entries as we go. Finder metadata files have no business shipping
     # inside the encrypted personal archive — they're per-machine cruft
     # that re-grows on every harvest and bloats the tarball for nothing.
+    #
+    # Symlinks are preserved (not dereferenced): stow/chezmoi-style
+    # dotfile setups frequently have ~/.config/nvim → ~/dotfiles/nvim,
+    # and following them would (a) silently miss the linked content
+    # because Dir.glob doesn't descend through symlinks, and (b) pull
+    # out-of-tree files into the encrypted archive. Symlink? check has
+    # to come BEFORE directory? because the latter follows symlinks.
     def copy_dotdir_tree(src, dest_relative)
       dest = File.join(output_dir, dest_relative)
       FileUtils.rm_rf(dest) if File.exist?(dest)
@@ -231,7 +238,10 @@ module MacSetup
         next if [".", "..", ".DS_Store"].include?(File.basename(rel))
         full_src = File.join(src, rel)
         full_dest = File.join(dest, rel)
-        if File.directory?(full_src)
+        if File.symlink?(full_src)
+          FileUtils.mkdir_p(File.dirname(full_dest))
+          File.symlink(File.readlink(full_src), full_dest)
+        elsif File.directory?(full_src)
           FileUtils.mkdir_p(full_dest)
         else
           FileUtils.mkdir_p(File.dirname(full_dest))

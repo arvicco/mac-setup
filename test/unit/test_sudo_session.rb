@@ -38,4 +38,23 @@ class TestSudoSession < Minitest::Test
     @session.define_singleton_method(:system) { |*_args| raise "must not call system when nothing installed" }
     @session.release
   end
+
+  # SIGTERM/INT/HUP don't trigger at_exit by default. Without traps,
+  # a `timeout 300 ruby bin/setup` (TERM at expiry) or supervised
+  # abort leaves /etc/sudoers.d/mac-setup-<pid> behind — a NOPASSWD
+  # entry on the target until manual rm.
+  def test_install_signal_traps_registers_handlers_for_term_int_hup
+    # Save & restore real handlers so we don't disturb the test runner.
+    saved = MacSetup::SudoSession::TRAPPED_SIGNALS.map { |s| [s, Signal.trap(s, "DEFAULT")] }
+    @session.send(:install_signal_traps)
+    MacSetup::SudoSession::TRAPPED_SIGNALS.each do |sig|
+      # `Signal.trap(sig, ...)` returns the prior handler. After install,
+      # the prior handler is what we just set — a Proc, not the default.
+      prior = Signal.trap(sig, "DEFAULT")
+      assert_kind_of Proc, prior,
+                     "expected install_signal_traps to register a Proc for SIG#{sig}, got #{prior.inspect}"
+    end
+  ensure
+    saved&.each { |s, h| Signal.trap(s, h) if h }
+  end
 end

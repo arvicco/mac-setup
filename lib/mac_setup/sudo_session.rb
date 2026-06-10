@@ -15,9 +15,15 @@ module MacSetup
   #
   # The sudoers file is pid-uniqued so concurrent mac-setup runs don't
   # collide, and registered for at_exit cleanup so normal exits / aborts /
-  # exceptions all remove it. Crash without at_exit (SIGKILL, kernel
-  # panic) leaves an orphan; recovery line is documented in README.
+  # exceptions all remove it. We also trap SIGTERM/SIGINT/SIGHUP and
+  # invoke release before exit — the default Ruby handler for these
+  # signals does NOT run at_exit hooks, so without the traps a kill
+  # (timeout, supervised abort, terminal hangup) would leave a NOPASSWD
+  # entry on the target. SIGKILL and kernel panic still leave orphans;
+  # the recovery one-liner is documented in README.
   class SudoSession
+    TRAPPED_SIGNALS = %w[TERM INT HUP].freeze
+
     def initialize(logger:)
       @logger = logger
       @sudoers_installed = false
@@ -32,6 +38,19 @@ module MacSetup
       end
       install_temp_nopasswd
       at_exit { release }
+      install_signal_traps
+    end
+
+    # Best-effort: TERM/INT/HUP arriving mid-run trigger release before
+    # exit. If the trap itself fails for any reason (signal masked,
+    # nested handler) we still exit — never block on cleanup.
+    def install_signal_traps
+      TRAPPED_SIGNALS.each do |sig|
+        Signal.trap(sig) do
+          release rescue nil
+          exit 130 # convention: 128 + signal number is close enough
+        end
+      end
     end
 
     def release
