@@ -241,4 +241,45 @@ class TestRunner < Minitest::Test
     runner.define_singleton_method(:system) { |*_args| raise "must not call system when nothing installed" }
     runner.send(:release_sudo)
   end
+
+  # Closed-stdin (non-TTY) interactive mode used to silently default to
+  # "run every module" because `$stdin.gets` returned nil → answer ""
+  # → not "n". On a remote ssh-without-args run that's a surprise: the
+  # user expects either a prompt or a clean error, not the whole suite
+  # firing unattended. Conservative behavior: abort with a clear hint
+  # to pass --all or specific module names.
+  def test_select_modules_aborts_when_stdin_is_not_a_tty
+    runner = MacSetup::Runner.new
+    runner.instance_variable_set(:@options, {})
+    runner.instance_variable_set(:@argv, [])
+    fake = StringIO.new("")
+    def fake.tty?; false; end
+    orig = $stdin
+    $stdin = fake
+    logger = MacSetup::Utils::Logger.new
+    capture_io do
+      assert_raises(SystemExit) { runner.send(:select_modules, logger) }
+    end
+  ensure
+    $stdin = orig if orig
+  end
+
+  def test_select_modules_returns_all_with_all_flag_without_stdin
+    runner = MacSetup::Runner.new
+    runner.instance_variable_set(:@options, {all: true})
+    runner.instance_variable_set(:@argv, [])
+    # --all bypasses stdin entirely; even closed stdin works fine.
+    selected = runner.send(:select_modules, MacSetup::Utils::Logger.new)
+    assert_equal MacSetup::Runner::MODULES, selected
+  end
+
+  def test_select_modules_returns_named_modules_without_stdin
+    runner = MacSetup::Runner.new
+    runner.instance_variable_set(:@options, {})
+    runner.instance_variable_set(:@argv, ["homebrew", "secrets"])
+    # Named modules also bypass the prompt loop.
+    selected = runner.send(:select_modules, MacSetup::Utils::Logger.new)
+    assert_includes selected, MacSetup::Homebrew
+    assert_includes selected, MacSetup::Secrets
+  end
 end
