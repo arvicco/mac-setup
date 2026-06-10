@@ -12,8 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The deployment target is Apple-stock Ruby 2.6.10 — newer Macs may
+      # not preinstall it, but every active mac-setup install still runs
+      # under it (brew Ruby is keg-only and we explicitly opt in to that
+      # PATH only after Homebrew runs). CI must exercise the same floor or
+      # 2.7+ syntax leaks through (Array#filter_map, **nil, etc.).
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.6'
+
       - name: Ruby version
-        run: ruby --version
+        run: ruby --version | grep -F '2.6'
 
       - name: Syntax check
         run: find lib test -name '*.rb' -exec ruby -c {} +
