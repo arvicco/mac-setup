@@ -100,9 +100,27 @@ module MacSetup
         end
 
         write_stamp
+        rotate_backups(keep: @backup_path)
         logger.success "Personal config decrypted to config/personal/."
       ensure
         File.unlink(tmp.path) if File.exist?(tmp.path)
+      end
+    end
+
+    # Rotate-to-one: keep the freshest backup as a one-cycle undo, prune
+    # everything older. Called only after the new tree is on disk and
+    # stamped — stage-before-destroy per CLAUDE.md atomic-actions rule.
+    # `keep:` is the path produced by this run's backup_existing_personal
+    # (nil when nothing was backed up, in which case we still prune any
+    # stale backups left by prior runs).
+    def rotate_backups(keep:)
+      parent = File.dirname(decrypted_path)
+      pattern = File.join(parent, "#{File.basename(decrypted_path)}.bak-*")
+      Dir.glob(pattern).each do |path|
+        next unless File.directory?(path)
+        next if path == keep
+        FileUtils.rm_rf(path)
+        logger.info "Pruned stale backup #{File.basename(path)}."
       end
     end
 

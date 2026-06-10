@@ -199,6 +199,70 @@ class TestSecrets < Minitest::Test
     assert_match(/To restore/, err)
   end
 
+  # Rotate-to-one: keep the most recent backup as a one-cycle undo, prune
+  # everything older. Without this, every re-decrypt would leave another
+  # plaintext copy of gh_token / tailscale OAuth secret / autologin
+  # password on disk forever. Found one such directory in the working
+  # tree at audit time — config/personal.bak-20260421-182254/ — proving
+  # the bleed is real, not theoretical.
+  def test_rotate_backups_keeps_only_the_newest_bak
+    with_tmp_paths do |_, dec|
+      parent = File.dirname(dec)
+      old_a = File.join(parent, "personal.bak-20260101-000000")
+      old_b = File.join(parent, "personal.bak-20260201-000000")
+      newest = File.join(parent, "personal.bak-20260301-000000")
+      [old_a, old_b, newest].each { |p| FileUtils.mkdir_p(p); File.write(File.join(p, "gh_token"), "secret") }
+
+      @mod.send(:rotate_backups, keep: newest)
+
+      refute File.exist?(old_a), "old backup A must be pruned"
+      refute File.exist?(old_b), "old backup B must be pruned"
+      assert File.directory?(newest), "newest backup must be preserved (one-cycle undo)"
+    end
+  end
+
+  def test_rotate_backups_silently_handles_no_existing_backups
+    with_tmp_paths do |_, _|
+      # Should not raise even when there's nothing to prune
+      @mod.send(:rotate_backups, keep: nil)
+      pass
+    end
+  end
+
+  def test_rotate_backups_keeps_nothing_when_keep_is_nil
+    # keep:nil means "this decrypt didn't create a backup" — old backups
+    # from prior runs should still be cleaned. Conservative trade-off:
+    # nil-keep prunes everything, matching the success-path expectation
+    # that fresh state needs no historical plaintext.
+    with_tmp_paths do |_, dec|
+      parent = File.dirname(dec)
+      stale = File.join(parent, "personal.bak-20260101-000000")
+      FileUtils.mkdir_p(stale); File.write(File.join(stale, "gh_token"), "secret")
+
+      @mod.send(:rotate_backups, keep: nil)
+
+      refute File.exist?(stale)
+    end
+  end
+
+  def test_rotate_backups_does_not_touch_unrelated_siblings
+    with_tmp_paths do |_, dec|
+      parent = File.dirname(dec)
+      unrelated = File.join(parent, "other_dir")
+      bak_like_file = File.join(parent, "personal.bak-not-a-dir")
+      FileUtils.mkdir_p(unrelated); File.write(File.join(unrelated, "important"), "data")
+      File.write(bak_like_file, "looks like backup but is a file")
+      old = File.join(parent, "personal.bak-20260101-000000")
+      FileUtils.mkdir_p(old)
+
+      @mod.send(:rotate_backups, keep: nil)
+
+      assert File.directory?(unrelated), "unrelated siblings must be untouched"
+      assert File.exist?(bak_like_file), "non-dir backup-named files must be untouched"
+      refute File.exist?(old), "matching bak dirs ARE pruned"
+    end
+  end
+
   private
 
   # Capture stdout+stderr around a block so we can assert on logger output
