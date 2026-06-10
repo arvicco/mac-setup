@@ -29,10 +29,16 @@ module MacSetup
       #                   Use for long-running commands (brew bundle, nvm
       #                   install, oh-my-zsh install) where waiting silently
       #                   is worse than losing the post-hoc recap on failure.
-      def run(*args, abort_on_fail: false, quiet: false, stream: false)
+      #   redact:         array of regexes. Any arg matching one of them
+      #                   gets the matched portion replaced with `<redacted>`
+      #                   in the echoed `$ cmd` line. The real value still
+      #                   reaches exec. Centralizes the "don't leak a token
+      #                   into the log" pattern so future callers can opt
+      #                   in without rolling their own quiet+manual-log.
+      def run(*args, abort_on_fail: false, quiet: false, stream: false, redact: [])
         raise ArgumentError, "run requires at least one argument" if args.empty?
 
-        logger.info "$ #{display(args)}" unless quiet
+        logger.info "$ #{display(args, redact)}" unless quiet
 
         if stream
           system(*args)
@@ -45,11 +51,11 @@ module MacSetup
 
         unless status.success?
           if abort_on_fail
-            logger.error "Command failed (exit #{status.exitstatus}): #{display(args)}"
+            logger.error "Command failed (exit #{status.exitstatus}): #{display(args, redact)}"
             logger.error stderr unless stderr.empty?
             exit 1
           elsif !quiet
-            logger.error "Command failed (exit #{status.exitstatus}): #{display(args)}"
+            logger.error "Command failed (exit #{status.exitstatus}): #{display(args, redact)}"
             logger.error stderr unless stderr.empty?
           end
         end
@@ -65,8 +71,19 @@ module MacSetup
 
       private
 
-      def display(args)
-        args.length == 1 ? args.first : Shellwords.join(args)
+      def display(args, redact = [])
+        rendered = args.map { |a| redact_arg(a.to_s, redact) }
+        rendered.length == 1 ? rendered.first : Shellwords.join(rendered)
+      end
+
+      def redact_arg(arg, patterns)
+        return arg if patterns.empty?
+        patterns.each do |re|
+          if (m = arg.match(re))
+            return "#{m[0]}<redacted>"
+          end
+        end
+        arg
       end
     end
   end

@@ -264,12 +264,11 @@ module MacSetup
         "--accept-dns",
         *extra_args,
       ]
-      # `quiet: true` suppresses CommandRunner's argv echo — otherwise the
-      # full auth key lands in the terminal, controller SSH log, and any
-      # CI capture. We print a redacted version instead.
-      redacted = args.map { |a| a.start_with?("--auth-key=") ? "--auth-key=<redacted>" : a }
-      logger.info "$ #{redacted.join(" ")}"
-      _out, err, status = cmd.run(*args, quiet: true, abort_on_fail: false)
+      # Redact the auth-key value in the echoed command line; CommandRunner
+      # still execs the real value, and the log/terminal never see it.
+      _out, err, status = cmd.run(*args,
+                                  redact: [/\A--auth-key=/],
+                                  abort_on_fail: false)
       unless status.success?
         logger.error "tailscale up failed: #{err.strip}"
         raise "tailscale up exited #{status.exitstatus}"
