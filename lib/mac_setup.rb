@@ -31,6 +31,15 @@ require_relative "mac_setup/harvester"
 require_relative "mac_setup/runner"
 
 module MacSetup
-  VERSION = "0.1.0"
   ROOT = File.expand_path("..", __dir__)
+  # Single source of truth. The release task (rake release:prepare) writes
+  # this file; bin/setup logs the value at startup so triage from log files
+  # always shows the deployed version. Fallback handles cases where this
+  # file isn't present (vendored copies, gem-style installs — none today,
+  # but cheap insurance).
+  VERSION = begin
+    File.read(File.join(ROOT, "VERSION")).strip
+  rescue Errno::ENOENT, Errno::EACCES
+    "0.0.0+unknown"
+  end
 end
