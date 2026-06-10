@@ -225,37 +225,8 @@ module MacSetup
       end
     end
 
-    def normalize_name(name)
-      name.downcase.gsub(/\s+/, "")
-    end
-
     def select_modules(logger)
-      return MODULES if @options[:all]
-
-      unless @argv.empty?
-        names = @argv.map { |n| normalize_name(n) }
-        return MODULES.select { |m| names.include?(normalize_name(m.module_name)) }
-      end
-
-      # Interactive prompt loop only makes sense on a TTY. Without this
-      # guard, a non-interactive `ssh host ruby bin/setup` (no --all, no
-      # module names) hit EOF on every prompt → defaulted "Y" on each →
-      # ran the entire suite unattended. Conservative behavior: refuse
-      # and tell the user the right invocation.
-      unless $stdin.tty?
-        logger.error "No TTY for interactive prompts and no module selection given."
-        logger.error "Pass --all to run every module, or list specific module names (see --list)."
-        exit 1
-      end
-
-      selected = []
-      MODULES.each do |mod_class|
-        print "Run #{mod_class.module_name}? [Y/n] "
-        input = $stdin.gets
-        answer = input ? input.chomp.strip.downcase : ""
-        selected << mod_class unless answer == "n"
-      end
-      selected
+      ModuleSelector.new(modules: MODULES, options: @options, argv: @argv).select(logger)
     end
   end
 end
