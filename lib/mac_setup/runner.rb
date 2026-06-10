@@ -100,6 +100,7 @@ module MacSetup
     def open_log_file
       log_dir = File.join(MacSetup::ROOT, "log")
       FileUtils.mkdir_p(log_dir)
+      prune_old_logs(log_dir)
       path = File.join(log_dir, "setup-#{Time.now.strftime("%Y%m%d-%H%M%S")}.log")
       file = File.open(path, "a")
       file.sync = true
@@ -109,6 +110,20 @@ module MacSetup
       # run setup and lose the trace than refuse to run at all.
       warn "Could not open log file (#{e.message}); continuing without file logging."
       nil
+    end
+
+    # Drop setup-*.log files older than `days` days. Keeps the log/
+    # directory from accumulating one-per-run forever on long-lived
+    # home-server installs. Only matches our own naming pattern so
+    # stray files in log/ (e.g., a user's hand-saved snapshot) survive.
+    def prune_old_logs(log_dir, days: 30)
+      return unless File.directory?(log_dir)
+      cutoff = Time.now - (days * 86400)
+      Dir.glob(File.join(log_dir, "setup-*.log")).each do |path|
+        File.unlink(path) if File.mtime(path) < cutoff
+      end
+    rescue StandardError
+      # Best-effort: a permissions hiccup must not block the setup run.
     end
 
     private

@@ -282,4 +282,49 @@ class TestRunner < Minitest::Test
     assert_includes selected, MacSetup::Homebrew
     assert_includes selected, MacSetup::Secrets
   end
+
+  # Log files accumulate one-per-run forever. The home-server use case
+  # means many years of `setup-YYYYMMDD-HHMMSS.log` build up. Prune
+  # everything older than the retention window at startup. Keeps the
+  # log/ dir self-tidying without losing recent triage history.
+  def test_prune_old_logs_removes_files_older_than_retention
+    Dir.mktmpdir do |dir|
+      old = File.join(dir, "setup-20200101-000000.log")
+      recent = File.join(dir, "setup-99991231-235959.log")
+      File.write(old, "stale")
+      File.write(recent, "fresh")
+      File.utime(Time.now - (40 * 86400), Time.now - (40 * 86400), old)
+      File.utime(Time.now,                Time.now,                recent)
+
+      runner = MacSetup::Runner.new
+      runner.send(:prune_old_logs, dir, days: 30)
+
+      refute File.exist?(old), "older than retention must be pruned"
+      assert File.exist?(recent), "recent log must be kept"
+    end
+  end
+
+  def test_prune_old_logs_only_touches_setup_logs
+    Dir.mktmpdir do |dir|
+      old_setup = File.join(dir, "setup-20200101-000000.log")
+      unrelated_old = File.join(dir, "something_else.log")
+      File.write(old_setup, "stale")
+      File.write(unrelated_old, "stale-too")
+      [old_setup, unrelated_old].each do |p|
+        File.utime(Time.now - (90 * 86400), Time.now - (90 * 86400), p)
+      end
+
+      runner = MacSetup::Runner.new
+      runner.send(:prune_old_logs, dir, days: 30)
+
+      refute File.exist?(old_setup), "setup-*.log: pruned"
+      assert File.exist?(unrelated_old), "other files: untouched"
+    end
+  end
+
+  def test_prune_old_logs_silently_handles_missing_dir
+    runner = MacSetup::Runner.new
+    runner.send(:prune_old_logs, "/nonexistent/path/that/does/not/exist", days: 30)
+    pass
+  end
 end
