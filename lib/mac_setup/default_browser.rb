@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 module MacSetup
-  class Cask < BaseModule
+  # Sets the system default browser via the `defaultbrowser` Homebrew
+  # formula. Originally named `Cask` (for post-install Cask config in
+  # general); now only does the one job, so the name reflects that.
+  class DefaultBrowser < BaseModule
     DEFAULTBROWSER = Homebrew.bin("defaultbrowser")
 
     def run

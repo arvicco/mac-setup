@@ -140,8 +140,8 @@ class VMTest
 
   # Modules we run in the VM. Excluded because they can't work or be verified
   # in a headless Tart VM:
-  #   - cask: `defaultbrowser chrome` requires LaunchServices to see Chrome,
-  #     which it doesn't in a headless session
+  #   - defaultbrowser: `defaultbrowser chrome` requires LaunchServices to see
+  #     Chrome, which it doesn't in a headless session
   #   - powermanagement: pmset silently drops settings on hardware without a
   #     detectable power source, with no way to read back what was set
   #   - tailscale: requires real OAuth creds + a live control-plane call;

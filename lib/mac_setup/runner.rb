@@ -14,7 +14,7 @@ module MacSetup
       Node,
       Dotfiles,
       ClaudeCode,
-      Cask,
+      DefaultBrowser,
       MacosDefaults,
       Dock,
       AutoLogin,

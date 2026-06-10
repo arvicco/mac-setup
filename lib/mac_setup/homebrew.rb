@@ -19,7 +19,7 @@ module MacSetup
 
     # Helper for other modules: absolute path to a brew-installed binary
     # without each module having to remember the /opt/homebrew prefix or
-    # the bin/ subdir. Used by Dock, Cask/DefaultBrowser, Tailscale.
+    # the bin/ subdir. Used by Dock, DefaultBrowser, Tailscale.
     def self.bin(name)
       "#{PREFIX}/bin/#{name}"
     end
