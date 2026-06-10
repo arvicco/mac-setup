@@ -36,7 +36,12 @@ module MacSetup
       data || {}
     end
 
+    # Non-TTY: keep whatever git already has, no prompt printed. Matches
+    # the Hostname / Secrets pattern — a non-interactive run that didn't
+    # pass --git-name/--git-email shouldn't ghost-print a prompt to the
+    # log, and shouldn't overwrite a real identity with an empty string.
     def prompt(label, current)
+      return current unless $stdin.tty?
       if current.empty?
         print "#{label}: "
       else

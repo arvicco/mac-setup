@@ -23,7 +23,13 @@ module MacSetup
 
     private
 
+    # Non-TTY: don't even print the prompt. A `ssh host ruby bin/setup`
+    # invocation without --hostname would otherwise show a phantom prompt
+    # in the log; better to silently keep the current name and trust the
+    # caller to pass --hostname when they want a change. Matches the
+    # Secrets module's prompt-on-tty-only pattern.
     def prompt_for_hostname(current)
+      return "" unless $stdin.tty?
       print "Enter new hostname (blank to keep '#{current}'): "
       input = $stdin.gets
       input ? input.chomp.strip : ""
