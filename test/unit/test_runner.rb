@@ -150,6 +150,52 @@ class TestRunner < Minitest::Test
     end
   end
 
+  # --cleanup-secrets must also nuke config/personal.bak-*/ directories.
+  # Otherwise a re-decrypt followed by --cleanup-secrets leaves the
+  # rotate-to-one undo backup on disk indefinitely — exactly the leak
+  # the flag is supposed to prevent.
+  def test_cleanup_secrets_also_removes_personal_bak_dirs
+    Dir.mktmpdir do |tmpdir|
+      personal = File.join(tmpdir, "personal")
+      FileUtils.mkdir_p(personal)
+      File.write(File.join(personal, "gh_token"), "ghp_secret")
+      bak = File.join(tmpdir, "personal.bak-20260601-000000")
+      FileUtils.mkdir_p(bak)
+      File.write(File.join(bak, "gh_token"), "ghp_old_secret")
+
+      runner = MacSetup::Runner.new
+      runner.instance_variable_set(:@options, {cleanup_secrets: true})
+      runner.define_singleton_method(:decrypted_personal_path) { personal }
+      logger = MacSetup::Utils::Logger.new
+      capture_io { runner.send(:cleanup_secrets, logger) }
+
+      refute File.exist?(personal), "personal/ must be removed"
+      refute File.exist?(bak), "personal.bak-*/ must also be removed"
+    end
+  end
+
+  def test_cleanup_secrets_keeps_bak_dirs_when_errors_present
+    Dir.mktmpdir do |tmpdir|
+      personal = File.join(tmpdir, "personal")
+      FileUtils.mkdir_p(personal)
+      bak = File.join(tmpdir, "personal.bak-20260601-000000")
+      FileUtils.mkdir_p(bak)
+      File.write(File.join(bak, "gh_token"), "stale_secret")
+
+      runner = MacSetup::Runner.new
+      runner.instance_variable_set(:@options, {cleanup_secrets: true})
+      runner.define_singleton_method(:decrypted_personal_path) { personal }
+      logger = MacSetup::Utils::Logger.new
+      capture_io do
+        logger.error("simulated module failure")
+        runner.send(:cleanup_secrets, logger)
+      end
+
+      assert File.directory?(personal), "personal/ preserved on error"
+      assert File.directory?(bak), "bak dirs also preserved on error"
+    end
+  end
+
   def test_cleanup_secrets_flag_parses_from_argv
     runner = MacSetup::Runner.new(["--cleanup-secrets"])
     assert_equal true, runner.instance_variable_get(:@options)[:cleanup_secrets]

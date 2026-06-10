@@ -196,15 +196,24 @@ module MacSetup
       return unless @options[:cleanup_secrets]
 
       path = decrypted_personal_path
-      return unless File.directory?(path)
+      bak_pattern = File.join(File.dirname(path), "#{File.basename(path)}.bak-*")
+      bak_dirs = Dir.glob(bak_pattern).select { |p| File.directory?(p) }
+
+      return if !File.directory?(path) && bak_dirs.empty?
 
       if logger.error_count > 0
-        logger.warn "--cleanup-secrets requested but #{logger.error_count} module error(s) — keeping config/personal/ for re-run."
+        logger.warn "--cleanup-secrets requested but #{logger.error_count} module error(s) — keeping config/personal/ and any backups for re-run."
         return
       end
 
-      FileUtils.rm_rf(path)
-      logger.success "Removed config/personal/ (--cleanup-secrets). Re-run will re-decrypt from personal.age."
+      if File.directory?(path)
+        FileUtils.rm_rf(path)
+        logger.success "Removed config/personal/ (--cleanup-secrets). Re-run will re-decrypt from personal.age."
+      end
+      bak_dirs.each do |bak|
+        FileUtils.rm_rf(bak)
+        logger.success "Removed #{File.basename(bak)} (--cleanup-secrets)."
+      end
     end
 
     def decrypted_personal_path
