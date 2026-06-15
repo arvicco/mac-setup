@@ -44,11 +44,14 @@ module MacSetup
     # Best-effort: TERM/INT/HUP arriving mid-run trigger release before
     # exit. If the trap itself fails for any reason (signal masked,
     # nested handler) we still exit — never block on cleanup.
+    # Exit code follows shell convention: 128 + signal number, so INT
+    # (sig 2) → 130, TERM (15) → 143, HUP (1) → 129.
+    SIGNAL_NUMBERS = { "INT" => 2, "TERM" => 15, "HUP" => 1 }.freeze
     def install_signal_traps
       TRAPPED_SIGNALS.each do |sig|
         Signal.trap(sig) do
           release rescue nil
-          exit 130 # convention: 128 + signal number is close enough
+          exit 128 + SIGNAL_NUMBERS.fetch(sig, 0)
         end
       end
     end

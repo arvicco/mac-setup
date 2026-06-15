@@ -176,4 +176,34 @@ class TestTailscale < Minitest::Test
     assert_equal 0, @logger.error_count,
                  "probe failure must not bump error_count (would mark module as failed)"
   end
+
+  # BLOCKER fix: when `tailscale up` fails, the captured stderr is
+  # forwarded to logger.error via "tailscale up failed: #{err.strip}".
+  # If tailscale echoed the offending auth-key back in its validation
+  # error, that secret would land in log/setup-*.log unredacted unless
+  # we scrub it inline (CommandRunner only scrubs ITS error lines —
+  # this `logger.error` is ours). scrub_secrets must turn the tskey-*
+  # value into <redacted>.
+  def test_scrub_secrets_scrubs_auth_key_value_and_argv_form
+    raw = %(failed to authenticate with --auth-key=tskey-MNOXYZ12345; backend rejected)
+    scrubbed = @mod.send(:scrub_secrets, raw)
+    refute_includes scrubbed, "tskey-MNOXYZ12345"
+    refute_includes scrubbed, "tskey-"
+    assert_match(/redacted/, scrubbed)
+  end
+
+  def test_tailscale_up_failure_path_does_not_leak_secret_to_log
+    fake_cmd = Object.new
+    fake_cmd.define_singleton_method(:run) do |*_args, **_kwargs|
+      ["", "auth failed: tskey-LEAKYVALUE rejected by control",
+       Struct.new(:success?, :exitstatus).new(false, 1)]
+    end
+    @mod.instance_variable_set(:@cmd, fake_cmd)
+    assert_raises(RuntimeError) do
+      capture_io { @mod.send(:tailscale_up, "tskey-LEAKYVALUE", "host", []) }
+    end
+    refute_includes @log_io.string, "tskey-LEAKYVALUE",
+                    "auth-key value must NOT appear in the log even on failure"
+    assert_match(/redacted/, @log_io.string)
+  end
 end

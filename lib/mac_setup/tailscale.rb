@@ -15,6 +15,18 @@ module MacSetup
     # them. 5 min gives generous headroom for slow networks.
     KEY_TTL_SECONDS = 300
 
+    # Two-layer redaction for auth keys:
+    # - the `--auth-key=` argv slot (echoed once)
+    # - the literal tskey-* value (may appear bare in stderr if `tailscale
+    #   up` echoes the offending key back in a validation error)
+    # CommandRunner applies both to argv echo AND captured stderr on the
+    # failure path; we apply them again inline before forwarding err to
+    # `logger.error` so the manual failure-prefix line is also clean.
+    REDACT_PATTERNS = [
+      /\A--auth-key=/,
+      /tskey-[A-Za-z0-9-]+/,
+    ].freeze
+
     # Two legal modes, picked per-machine by which package the user put in
     # their personal Brewfile:
     #   - formula (`brew "tailscale"`) — headless daemon for always-on servers
@@ -264,16 +276,24 @@ module MacSetup
         "--accept-dns",
         *extra_args,
       ]
-      # Redact the auth-key value in the echoed command line; CommandRunner
-      # still execs the real value, and the log/terminal never see it.
+      # Redact the auth-key in the echoed command line; CommandRunner still
+      # execs the real value. REDACT_PATTERNS includes both the --auth-key=
+      # prefix (argv) and the bare tskey-* value (stderr) so a tailscale
+      # validation error echoing the key back gets scrubbed too.
       _out, err, status = cmd.run(*args,
-                                  redact: [/\A--auth-key=/],
+                                  redact: REDACT_PATTERNS,
                                   abort_on_fail: false)
       unless status.success?
-        logger.error "tailscale up failed: #{err.strip}"
+        logger.error "tailscale up failed: #{scrub_secrets(err.strip)}"
         raise "tailscale up exited #{status.exitstatus}"
       end
       logger.success "Tailscale connected as '#{hostname}'."
+    end
+
+    # Apply the same redaction the CommandRunner uses internally so any
+    # manual logger.error that forwards captured stderr stays leak-free.
+    def scrub_secrets(text)
+      REDACT_PATTERNS.reduce(text) { |t, re| t.gsub(re, "<redacted>") }
     end
 
     def http_request(uri, req, label)
